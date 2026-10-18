@@ -132,3 +132,41 @@ function buka(id) {
     };
   }
   $("#dlg").showModal();
+}
+views.kuis = () => {
+  $("#kuisAll").innerHTML = kuis.map((k) => {
+    const s = subs[k.id];
+    const tag = s ? `<span class="tag ok">Nilai ${esc(s.nilai)}</span>` : '<span class="tag warn">Belum dikerjakan</span>';
+    return `<li><a href="#" data-k="${k.id}" class="row"><div class="fi">${icon("edit")}</div><div><b>${esc(k.judul)}</b><div class="mute sm">${(k.soal || []).length} soal${k.deskripsi ? " · " + esc(k.deskripsi) : ""}</div></div></a>${tag}</li>`;
+  }).join("") || kosong("Belum ada kuis.");
+  document.querySelectorAll("#kuisAll a").forEach((a) => (a.onclick = (e) => { e.preventDefault(); kerjakan(a.dataset.k); }));
+};
+function kerjakan(id) {
+  const k = kuis.find((x) => x.id === id), s = subs[id];
+  if (s) {
+    $("#isi").innerHTML = `<h1 style="font-size:1.35rem">${esc(k.judul)}</h1><div class="ans" style="text-align:center"><div class="score">${esc(s.nilai)}</div><p class="mute" style="margin-top:6px">${esc(s.feedback || "")}</p></div><p class="mute sm" style="margin-top:12px">Kuis ini sudah dikerjakan dan tidak bisa diulang.</p>`;
+    return $("#dlg").showModal();
+  }
+  $("#isi").innerHTML = `<h1 style="font-size:1.35rem">${esc(k.judul)}</h1><p class="mute sm">${(k.soal || []).length} soal. Semua soal harus dijawab.</p>
+    <form id="kf">${(k.soal || []).map((q, i) => `<div style="margin-top:20px"><b>${i + 1}. ${esc(q.teks)}</b>${q.opsi.map((o, j) => `<label class="opt"><input type="radio" name="q${i}" value="${j}" required><span>${"ABCD"[j]}. ${esc(o)}</span></label>`).join("")}</div>`).join("")}
+    <button class="btn full">Kirim jawaban</button></form>`;
+  $("#kf").onsubmit = async (e) => {
+    e.preventDefault();
+    if (!confirm("Kirim jawaban? Jawaban tidak bisa diubah.")) return;
+    const fd = new FormData(e.target), jawaban = {};
+    k.soal.forEach((q, i) => (jawaban[q.id] = Number(fd.get("q" + i))));
+    const btn = e.target.querySelector("button"); btn.disabled = true; btn.textContent = "Menghitung nilai...";
+    try {
+      if (!auth.currentUser?.getIdToken) throw new Error("Kuis membutuhkan koneksi Firebase (tidak tersedia di mode demo).");
+      const token = await auth.currentUser.getIdToken();
+      const r = await fetch("/api/submit-kuis", { method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + token }, body: JSON.stringify({ kuisId: id, jawaban }) });
+      const res = await r.json();
+      if (!r.ok) throw new Error(res.error || "Gagal mengirim jawaban");
+      subs[id] = { status: "selesai", nilai: res.nilai, feedback: res.feedback, tugasJudul: "Kuis: " + k.judul };
+      views.kuis(); kerjakan(id);
+    } catch (er) { alert(er.message); btn.disabled = false; btn.textContent = "Kirim jawaban"; }
+  };
+  $("#dlg").showModal();
+}
+show("beranda");
+</script></body></html>
