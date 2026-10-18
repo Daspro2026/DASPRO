@@ -10,14 +10,13 @@ const P = { home: "M3 11l9-8 9 8M5 10v10h14V10", book: "M4 19.5A2.5 2.5 0 016.5 
 export const icon = (n) => `<svg class="i" viewBox="0 0 24 24"><path d="${P[n] || ""}"/></svg>`;
 const fill = () => document.querySelectorAll("[data-ic]:empty").forEach((e) => (e.innerHTML = icon(e.dataset.ic)));
 new MutationObserver(fill).observe(document.documentElement, { childList: true, subtree: true });
-document.addEventListener("DOMContentLoaded", fill);
+fill();
 
 export function toast(m) {
   const t = Object.assign(document.createElement("div"), { className: "toast", textContent: m });
   document.body.append(t); setTimeout(() => t.remove(), 2400);
 }
-if (DEMO) document.addEventListener("DOMContentLoaded", () =>
-  document.body.insertAdjacentHTML("afterbegin", '<div class="demo">MODE DEMO: data contoh. Isi js/firebase.js untuk memakai Firebase. (Masuk dengan email berisi "guru" untuk melihat tampilan admin.)</div>'));
+if (DEMO) document.body.insertAdjacentHTML("afterbegin", '<div class="demo">MODE DEMO: data contoh. Isi js/firebase.js untuk memakai Firebase. (Masuk dengan email berisi "guru" untuk melihat tampilan admin.)</div>');
 
 // Membuat sidebar + navigasi tab. views = { idTab: fungsiRender }
 export function guard(needAdmin, tabs, views = {}) {
