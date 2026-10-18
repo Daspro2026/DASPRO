@@ -13,9 +13,13 @@ service cloud.firestore {
     match /settings/{id} { allow read: if true; allow write: if isAdmin(); }
     match /materi/{id} { allow read: if signedIn(); allow write: if isAdmin(); }
     match /tugas/{id}  { allow read: if signedIn(); allow write: if isAdmin(); }
+    match /kuis/{id}   { allow read: if signedIn(); allow write: if isAdmin(); }
+    // Kunci jawaban: HANYA admin. Siswa tidak bisa membaca sama sekali.
+    match /kunci/{id}  { allow read, write: if isAdmin(); }
     match /submissions/{id} {
       allow create: if signedIn() && request.resource.data.siswaId == request.auth.uid
-                    && request.resource.data.status == 'belum_diperiksa';
+                    && request.resource.data.status == 'belum_diperiksa'
+                    && request.resource.data.nilai == null;
       allow read: if isAdmin() || (signedIn() && resource.data.siswaId == request.auth.uid);
       allow update: if isAdmin();
     }
