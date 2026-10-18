@@ -58,6 +58,18 @@ input:focus{border-color:var(--b2);box-shadow:0 0 0 4px color-mix(in srgb,var(--
 <body>
 <div class="bg"><span class="x1"></span><span class="x2"></span><span class="x3"></span></div>
 
+<!-- Penampil galat: jika skrip gagal dimuat, pesannya tampil merah di atas halaman -->
+<script>
+(function(){
+  function show(msg){
+    var d=document.getElementById("diag");
+    if(!d){d=document.createElement("div");d.id="diag";d.style.cssText="position:fixed;top:0;left:0;right:0;z-index:99;background:#C62828;color:#fff;padding:10px 14px;font:600 13px/1.4 system-ui,sans-serif;word-break:break-word";document.body.appendChild(d);}
+    d.textContent="Gagal memuat halaman: "+msg+"  (kirim tulisan ini ke Claude)";
+  }
+  window.addEventListener("error",function(e){var t=e.target;show(t&&t.src?"file tidak bisa dimuat "+t.src:(e.message||"kesalahan skrip")+(e.filename?" @ "+e.filename.split("/").slice(-2).join("/")+":"+e.lineno:""));},true);
+  window.addEventListener("unhandledrejection",function(e){show(String((e.reason&&e.reason.message)||e.reason));});
+})();
+</script>
 <main class="page">
   <a href="index.html" class="logo"><i>D</i>DASPRO</a>
   <h2 class="hl">Belajar <span id="tw"></span><span class="cur"></span></h2>
@@ -118,3 +130,17 @@ $("#form").onsubmit = async (e) => {
     if (daftar) {
       const c = await createUserWithEmailAndPassword(auth, $("#email").value, $("#pass").value);
       await setDoc(doc(db, "users", c.user.uid), { nama: $("#nama").value, email: $("#email").value, role: "siswa", createdAt: serverTimestamp() });
+      location.href = "dashboard.html";
+    } else {
+      const c = await signInWithEmailAndPassword(auth, $("#email").value, $("#pass").value);
+      const p = (await getDoc(doc(db, "users", c.user.uid))).data();
+      location.href = p?.role === "admin" ? "admin.html" : "dashboard.html";
+    }
+  } catch (er) {
+    const m = { "auth/email-already-in-use": "Email sudah terdaftar. Silakan masuk.", "auth/weak-password": "Kata sandi minimal 6 karakter.", "auth/invalid-credential": "Email atau kata sandi salah." };
+    $("#err").textContent = m[er.code] || "Terjadi kesalahan. Periksa konfigurasi Firebase.";
+    $("#kirim").disabled = false;
+  }
+};
+</script>
+</body></html>
