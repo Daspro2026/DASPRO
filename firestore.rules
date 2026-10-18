@@ -10,6 +10,7 @@ service cloud.firestore {
       allow create: if signedIn() && request.auth.uid == uid && request.resource.data.role == 'siswa';
       allow update, delete: if isAdmin();
     }
+    match /settings/{id} { allow read: if true; allow write: if isAdmin(); }
     match /materi/{id} { allow read: if signedIn(); allow write: if isAdmin(); }
     match /tugas/{id}  { allow read: if signedIn(); allow write: if isAdmin(); }
     match /submissions/{id} {
