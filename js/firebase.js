@@ -4,11 +4,16 @@
 // (data contoh, tanpa Firebase) agar Anda bisa melihat tampilannya.
 // ============================================================
 const firebaseConfig = {
-  apiKey: "ISI_API_KEY",
-  authDomain: "ISI_PROJECT.firebaseapp.com",
-  projectId: "ISI_PROJECT_ID",
-  storageBucket: "ISI_PROJECT.firebasestorage.app",
-  appId: "ISI_APP_ID"
+ // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyD1hXiHeI33T5C059vttnJaaWqQeV-AzTs",
+  authDomain: "daspro-8f6ca.firebaseapp.com",
+  projectId: "daspro-8f6ca",
+  storageBucket: "daspro-8f6ca.firebasestorage.app",
+  messagingSenderId: "971620742175",
+  appId: "1:971620742175:web:199ef8e1740b0f8efa512a",
+  measurementId: "G-F47J6ESVTL"
+};
 };
 
 export const DEMO = firebaseConfig.apiKey.startsWith("ISI");
