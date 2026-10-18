@@ -96,6 +96,18 @@ dialog{border:0;border-radius:22px;max-width:580px;width:calc(100% - 32px);paddi
 <section id="nilaiS" class="hide"><div class="ph"><div><h1>Rekap nilai</h1><p>Semua jawaban yang sudah dinilai.</p></div>
   <button class="btn ghost" id="csv">Unduh CSV</button></div><div class="card" style="overflow-x:auto" id="rekap"></div></section>
 
+<section id="kuis" class="hide"><div class="ph"><div><h1>Kuis</h1><p>Buat soal pilihan ganda. Kunci jawaban hanya bisa dilihat guru, dan nilai siswa dihitung otomatis.</p></div></div>
+  <style>.qrad{width:auto!important;padding:0!important;accent-color:var(--brand);flex:none}</style>
+  <div class="grid gk">
+    <form class="card" id="kForm"><h2>Buat kuis baru</h2>
+      <label>Judul kuis</label><input id="kJudul" required placeholder="Contoh: Kuis Algoritma Bab 1">
+      <label>Deskripsi (opsional)</label><input id="kDesk">
+      <div id="soalBox"></div>
+      <button type="button" class="btn ghost full" id="tambahSoal">+ Tambah soal</button>
+      <button class="btn full" id="kSimpan">Simpan kuis</button></form>
+    <div class="card"><h2>Kuis Anda</h2><ul class="list" id="kDaftar" style="margin-top:8px"></ul></div>
+  </div></section>
+
 <section id="setelan" class="hide"><div class="ph"><div><h1>Pengaturan tampilan</h1><p>Ubah nama, warna, logo, dan teks halaman depan. Perubahan langsung terlihat di sini; klik Simpan agar berlaku untuk semua orang.</p></div></div>
   <style>.sw{display:flex;gap:10px;flex-wrap:wrap}.sw button{width:34px;height:34px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 1px var(--line);cursor:pointer}.sw button:hover{transform:scale(1.1)}#lp{width:64px;height:64px;border-radius:16px;background:var(--bg);border:1px solid var(--line);display:grid;place-items:center;overflow:hidden;font-size:.7rem;color:var(--mute);text-align:center;flex:none}#lp img{width:100%;height:100%;object-fit:cover}</style>
   <div class="grid g2">
@@ -118,7 +130,7 @@ import { db, storage, collection, getDocs, addDoc, deleteDoc, updateDoc, doc, qu
 import { guard, esc, $, ago, icon, toast, applySettings } from "./js/common.js";
 
 const views = {};
-const { show } = await guard(true, [["ringkasan", "Ringkasan", "grid"], ["konten", "Materi & Tugas", "upload"], ["periksa", "Periksa", "check"], ["nilaiS", "Rekap nilai", "star"], ["setelan", "Pengaturan", "sliders"]], views);
+const { show } = await guard(true, [["ringkasan", "Ringkasan", "grid"], ["konten", "Materi & Tugas", "upload"], ["periksa", "Periksa", "check"], ["kuis", "Kuis", "edit"], ["nilaiS", "Rekap nilai", "star"], ["setelan", "Pengaturan", "sliders"]], views);
 const all = async (c) => (await getDocs(collection(db, c))).docs.map((d) => ({ id: d.id, ...d.data() }));
 const kosong = (t) => `<div class="empty">${t}</div>`;
 $("#keP").onclick = () => show("periksa");
@@ -197,6 +209,58 @@ $("#csv").onclick = async () => {
   a.href = URL.createObjectURL(new Blob([rows.map((r) => r.map(q).join(",")).join("\n")], { type: "text/csv" }));
   a.download = "rekap-nilai-daspro.csv"; a.click();
 };
+/* Kuis */
+const HURUF = "ABCD";
+const baru = () => ({ teks: "", opsi: ["", "", "", ""], benar: null, bobot: 1 });
+let soalList = [];
+function renderSoal() {
+  $("#soalBox").innerHTML = soalList.map((q, i) => `<div class="card" style="margin-top:14px;background:var(--bg);padding:18px">
+    <div class="row" style="justify-content:space-between"><b>Soal ${i + 1}</b><button type="button" class="btn ghost sm" data-del="${i}">Hapus</button></div>
+    <label>Pertanyaan</label><textarea data-f="teks" data-i="${i}" style="min-height:70px">${esc(q.teks)}</textarea>
+    <label>Pilihan jawaban (klik bulatan di samping jawaban yang benar)</label>
+    ${q.opsi.map((o, j) => `<div class="row" style="margin-bottom:8px"><input class="qrad" type="radio" name="b${i}" data-i="${i}" data-j="${j}" ${q.benar === j ? "checked" : ""}><b>${HURUF[j]}</b><input data-o="1" data-i="${i}" data-j="${j}" value="${esc(o)}" placeholder="Pilihan ${HURUF[j]}"></div>`).join("")}
+    <label>Bobot nilai</label><input type="number" min="1" data-f="bobot" data-i="${i}" value="${q.bobot}" style="max-width:120px"></div>`).join("") || kosong("Belum ada soal.");
+}
+$("#tambahSoal").onclick = () => { soalList.push(baru()); renderSoal(); };
+$("#soalBox").addEventListener("input", (e) => {
+  const t = e.target, i = +t.dataset.i;
+  if (t.dataset.f) soalList[i][t.dataset.f] = t.dataset.f === "bobot" ? Number(t.value) || 1 : t.value;
+  else if (t.dataset.o) soalList[i].opsi[+t.dataset.j] = t.value;
+});
+$("#soalBox").addEventListener("change", (e) => { if (e.target.type === "radio") soalList[+e.target.dataset.i].benar = +e.target.dataset.j; });
+$("#soalBox").addEventListener("click", (e) => { const d = e.target.closest("[data-del]"); if (d) { soalList.splice(+d.dataset.del, 1); renderSoal(); } });
+views.kuis = async () => {
+  if (!soalList.length) { soalList = [baru()]; renderSoal(); }
+  const ks = (await getDocs(query(collection(db, "kuis"), orderBy("createdAt", "desc")))).docs.map((d) => ({ id: d.id, ...d.data() }));
+  $("#kDaftar").innerHTML = ks.map((k) => `<li><div class="row"><div class="fi">${icon("edit")}</div><div><b>${esc(k.judul)}</b><div class="mute sm">${(k.soal || []).length} soal</div></div></div>
+    <button class="btn ghost sm" data-id="${k.id}" style="color:var(--bad)">${icon("trash")}</button></li>`).join("") || kosong("Belum ada kuis.");
+  document.querySelectorAll("#kDaftar button").forEach((b) => (b.onclick = async () => {
+    if (!confirm("Hapus kuis ini beserta kunci jawabannya? Nilai siswa yang sudah masuk tetap tersimpan.")) return;
+    await deleteDoc(doc(db, "kuis", b.dataset.id)); await deleteDoc(doc(db, "kunci", b.dataset.id)); toast("Kuis dihapus"); views.kuis();
+  }));
+};
+$("#kForm").onsubmit = async (e) => {
+  e.preventDefault();
+  const soal = [], kunci = {};
+  for (let i = 0; i < soalList.length; i++) {
+    const q = soalList[i], idx = [0, 1, 2, 3].filter((j) => q.opsi[j].trim());
+    if (!q.teks.trim() || idx.length < 2) return alert(`Soal ${i + 1}: isi pertanyaan dan minimal 2 pilihan jawaban.`);
+    if (q.benar === null || !idx.includes(q.benar)) return alert(`Soal ${i + 1}: tandai jawaban yang benar (bulatan di samping pilihan).`);
+    const id = "q" + (i + 1);
+    soal.push({ id, teks: q.teks.trim(), opsi: idx.map((j) => q.opsi[j].trim()), bobot: q.bobot || 1 });
+    kunci[id] = idx.indexOf(q.benar);
+  }
+  if (!soal.length) return alert("Tambahkan minimal 1 soal.");
+  $("#kSimpan").disabled = true;
+  const id = "k" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  try {
+    await setDoc(doc(db, "kunci", id), { kunci });
+    await setDoc(doc(db, "kuis", id), { judul: $("#kJudul").value.trim(), deskripsi: $("#kDesk").value.trim(), soal, createdAt: serverTimestamp() });
+    e.target.reset(); soalList = [baru()]; renderSoal(); toast("Kuis tersimpan"); views.kuis();
+  } catch (er) { alert("Gagal menyimpan: " + er.message + "\nPastikan firestore.rules terbaru sudah di-Publish."); }
+  $("#kSimpan").disabled = false;
+};
+
 /* Pengaturan */
 const DEF = { nama: "DASPRO", warna: "#4338CA", judul: "Belajar tertata,\nnilai terpantau.", deskripsi: "Daus Academic & Skills Platform: tempat modul, materi, tugas, dan umpan balik guru berkumpul dalam satu halaman yang rapi.", logo: "" };
 const WARNA = [["Indigo", "#4338CA"], ["Biru", "#1D4ED8"], ["Teal", "#0F766E"], ["Hijau", "#047857"], ["Ungu", "#7E22CE"], ["Merah", "#BE123C"], ["Oranye", "#C2410C"], ["Abu", "#334155"]];
