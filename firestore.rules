@@ -1,0 +1,22 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function isAdmin() {
+      return signedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    match /users/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || isAdmin());
+      allow create: if signedIn() && request.auth.uid == uid && request.resource.data.role == 'siswa';
+      allow update, delete: if isAdmin();
+    }
+    match /materi/{id} { allow read: if signedIn(); allow write: if isAdmin(); }
+    match /tugas/{id}  { allow read: if signedIn(); allow write: if isAdmin(); }
+    match /submissions/{id} {
+      allow create: if signedIn() && request.resource.data.siswaId == request.auth.uid
+                    && request.resource.data.status == 'belum_diperiksa';
+      allow read: if isAdmin() || (signedIn() && resource.data.siswaId == request.auth.uid);
+      allow update: if isAdmin();
+    }
+  }
+}

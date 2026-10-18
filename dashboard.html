@@ -1,0 +1,134 @@
+<!DOCTYPE html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"><style>:root{--bg:#F5F6FA;--card:#fff;--ink:#161A2E;--mute:#6B7186;--line:#E8EAF2;--brand:#4338CA;--b2:#6366F1;--soft:#EEF0FF;--ok:#12805C;--okbg:#E4F6EE;--warn:#B45309;--warnbg:#FEF3E2;--bad:#C62828}
+*{box-sizing:border-box}
+body{margin:0;font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased;font-size:15px;line-height:1.5}
+a{color:inherit;text-decoration:none}h1,h2,h3,p{margin:0}
+h1{font-size:1.6rem;letter-spacing:-.02em;font-weight:800}h2{font-size:1.05rem;font-weight:700}
+.hide{display:none!important}.mute{color:var(--mute)}.sm{font-size:.85rem}.pre{white-space:pre-wrap}
+svg.i{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:1.15rem;letter-spacing:-.01em}
+.logo i{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--brand),var(--b2));color:#fff;display:grid;place-items:center;font-style:normal}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;background:var(--brand);color:#fff;font:inherit;font-weight:700;font-size:.9rem;padding:10px 20px;border-radius:12px;cursor:pointer;transition:.15s}
+.btn:hover{background:#3730A3}.btn:disabled{opacity:.5}
+.btn.ghost{background:#fff;color:var(--ink);border:1px solid var(--line)}.btn.ghost:hover{background:var(--bg)}
+.btn.full{width:100%;margin-top:18px}.btn.sm{padding:7px 14px;font-size:.82rem}
+label{display:block;font-size:.82rem;font-weight:700;color:var(--mute);margin:16px 0 6px}
+input,select,textarea{width:100%;font:inherit;font-size:.92rem;padding:11px 14px;border:1px solid var(--line);border-radius:12px;background:#fff;outline:none;transition:.15s}
+input:focus,select:focus,textarea:focus{border-color:var(--b2);box-shadow:0 0 0 4px rgba(99,102,241,.14)}
+textarea{min-height:120px;resize:vertical}
+/* app shell */
+.app{display:grid;grid-template-columns:252px 1fr;min-height:100vh}
+.side{position:sticky;top:0;height:100vh;background:#fff;border-right:1px solid var(--line);padding:24px 16px;display:flex;flex-direction:column;gap:28px}
+.side nav{display:flex;flex-direction:column;gap:4px}
+.side nav button{display:flex;align-items:center;gap:12px;border:0;background:none;font:inherit;font-weight:600;color:var(--mute);padding:11px 14px;border-radius:12px;cursor:pointer;text-align:left}
+.side nav button:hover{background:var(--bg);color:var(--ink)}
+.side nav button.on{background:var(--soft);color:var(--brand)}
+.me{margin-top:auto;display:flex;align-items:center;gap:10px;padding:12px;border:1px solid var(--line);border-radius:14px}
+.me .who{flex:1;min-width:0;line-height:1.25}.me b{display:block;font-size:.88rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.me small{color:var(--mute);font-size:.75rem}
+.me button,.mtop button{border:0;background:none;color:var(--mute);cursor:pointer;padding:6px;border-radius:8px}.me button:hover{background:var(--bg);color:var(--bad)}
+.av{width:38px;height:38px;border-radius:50%;background:var(--soft);color:var(--brand);display:grid;place-items:center;font-weight:800;flex:none}
+.main{padding:36px 40px 60px;max-width:1120px;width:100%}
+.mtop{display:none}
+.ph{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;margin-bottom:26px;flex-wrap:wrap}.ph p{color:var(--mute);margin-top:4px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:24px}
+.grid{display:grid;gap:18px}.g3{grid-template-columns:repeat(3,1fr)}.g4{grid-template-columns:repeat(4,1fr)}.g2{grid-template-columns:1fr 1fr}.gm{grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}.gp{grid-template-columns:1.5fr 1fr}.gk{grid-template-columns:1fr 1.4fr}
+.banner{background:linear-gradient(120deg,var(--brand),var(--b2));color:#fff;border-radius:22px;padding:32px;margin-bottom:22px}
+.banner h1{font-size:1.8rem}.banner p{opacity:.85;margin-top:6px}
+.stat{display:flex;align-items:center;gap:16px}
+.stat .ic{width:46px;height:46px;border-radius:14px;background:var(--soft);color:var(--brand);display:grid;place-items:center}
+.stat b{font-size:1.6rem;font-weight:800;display:block;line-height:1.1}
+.sec{display:flex;justify-content:space-between;align-items:center;margin:30px 0 14px}
+.list{list-style:none;margin:0;padding:0}
+.list li{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 0;border-top:1px solid var(--line)}
+.list li:first-child{border-top:0}.list a:hover b{color:var(--brand)}
+.row{display:flex;align-items:center;gap:14px;min-width:0}
+.fi{width:44px;height:44px;border-radius:12px;background:var(--soft);color:var(--brand);display:grid;place-items:center;flex:none}
+.mat{display:flex;flex-direction:column;gap:12px;transition:.15s}.mat:hover{border-color:#C7CBF5;transform:translateY(-2px)}
+.mat p{flex:1}
+.tag{display:inline-block;font-size:.74rem;font-weight:700;padding:3px 10px;border-radius:99px;background:var(--soft);color:var(--brand);white-space:nowrap}
+.tag.ok{background:var(--okbg);color:var(--ok)}.tag.warn{background:var(--warnbg);color:var(--warn)}
+.empty{padding:30px;text-align:center;color:var(--mute)}
+table{width:100%;border-collapse:collapse;font-size:.9rem}th{text-align:left;color:var(--mute);font-size:.8rem;padding:10px 12px;border-bottom:1px solid var(--line)}td{padding:14px 12px;border-bottom:1px solid var(--line)}
+.score{font-size:2.4rem;font-weight:800;color:var(--brand);line-height:1}
+.ans{background:var(--bg);border-radius:14px;padding:18px;margin-top:16px;line-height:1.65}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}.chips button{border:1px solid var(--line);background:#fff;font:inherit;font-size:.78rem;font-weight:600;padding:5px 12px;border-radius:99px;cursor:pointer;color:var(--ink)}.chips button:hover{background:var(--soft);color:var(--brand);border-color:#C7CBF5}
+dialog{border:0;border-radius:22px;max-width:580px;width:calc(100% - 32px);padding:30px;box-shadow:0 30px 80px rgba(20,20,60,.25)}dialog::backdrop{background:rgba(22,26,46,.45)}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:12px 22px;border-radius:12px;font-weight:600;font-size:.9rem;z-index:99}
+.demo{background:#FFF8E1;color:#7A5B00;font-size:.8rem;text-align:center;padding:7px 12px;font-weight:600}
+.err{color:var(--bad);font-size:.85rem;margin-top:12px}
+@media(max-width:860px){
+ .app{grid-template-columns:1fr}.side{position:fixed;top:auto;bottom:0;left:0;right:0;height:auto;z-index:20;flex-direction:row;padding:6px;border-right:0;border-top:1px solid var(--line)}
+ .side .logo,.me{display:none}.side nav{flex-direction:row;width:100%;justify-content:space-around}.side nav button{flex-direction:column;gap:2px;font-size:.7rem;padding:8px 10px}
+ .main{padding:20px 18px 100px}.mtop{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+ .g3,.g2,.gp,.gk{grid-template-columns:1fr}.g4{grid-template-columns:1fr 1fr}.banner{padding:24px}
+}
+</style><title>Beranda | DASPRO</title></head><body class="hide">
+<div class="app"><main class="main">
+  <section id="beranda"><div class="banner"><h1 id="sapa"></h1><p>Berikut ringkasan belajar Anda hari ini.</p></div>
+    <div class="grid g3" id="stat"></div>
+    <div class="sec"><h2>Tugas untuk Anda</h2></div><div class="card"><ul class="list" id="tugasMini"></ul></div>
+    <div class="sec"><h2>Materi terbaru</h2></div><div class="grid gm" id="materiMini"></div></section>
+  <section id="materi" class="hide"><div class="ph"><div><h1>Materi &amp; modul</h1><p>Semua bahan belajar dari guru.</p></div></div><div class="grid gm" id="materiAll"></div></section>
+  <section id="tugas" class="hide"><div class="ph"><div><h1>Tugas</h1><p>Kumpulkan sebelum tenggat.</p></div></div><div class="card"><ul class="list" id="tugasAll"></ul></div></section>
+  <section id="nilai" class="hide"><div class="ph"><div><h1>Nilai</h1><p>Hasil penilaian dan umpan balik guru.</p></div></div><div class="card" style="overflow-x:auto" id="nilaiTbl"></div></section>
+</main></div>
+<dialog id="dlg"><div id="isi"></div><button class="btn ghost full" id="tutup">Tutup</button></dialog>
+<script type="module">
+import { db, collection, getDocs, query, where, orderBy, doc, setDoc, serverTimestamp } from "./js/firebase.js";
+import { guard, esc, $, safeUrl, fdate, icon, toast } from "./js/common.js";
+
+const views = {};
+const { user, profile, show } = await guard(false, [["beranda", "Beranda", "home"], ["materi", "Materi", "book"], ["tugas", "Tugas", "task"], ["nilai", "Nilai", "star"]], views);
+const load = async (c) => (await getDocs(query(collection(db, c), orderBy("createdAt", "desc")))).docs.map((d) => ({ id: d.id, ...d.data() }));
+const [materi, tugas] = [await load("materi"), await load("tugas")];
+const subs = {};
+(await getDocs(query(collection(db, "submissions"), where("siswaId", "==", user.uid)))).docs.forEach((d) => (subs[d.data().tugasId] = d.data()));
+
+const status = (id) => { const s = subs[id]; return !s ? '<span class="tag warn">Belum dikumpulkan</span>' : s.status === "selesai" ? `<span class="tag ok">Nilai ${esc(s.nilai)}</span>` : '<span class="tag">Menunggu nilai</span>'; };
+const mCard = (m) => `<div class="card mat"><div class="row"><div class="fi">${icon(m.tipe === "modul" ? "book" : "file")}</div><span class="tag">${esc(m.tipe)}</span></div>
+  <div><h2>${esc(m.judul)}</h2></div><p class="mute sm">${esc(m.deskripsi || "")}</p>
+  <a class="btn ghost sm" href="${safeUrl(m.fileUrl)}" target="_blank" rel="noopener">${icon("download")} Buka file</a></div>`;
+const tItem = (t) => `<li><a href="#" data-id="${t.id}" class="row"><div class="fi">${icon("task")}</div><div><b>${esc(t.judul)}</b><div class="mute sm">${t.deadline ? "Tenggat " + fdate(t.deadline) : "Tanpa tenggat"}</div></div></a>${status(t.id)}</li>`;
+const bind = (root) => document.querySelectorAll(root + " a[data-id]").forEach((a) => (a.onclick = (e) => { e.preventDefault(); buka(a.dataset.id); }));
+const kosong = (t) => `<div class="empty">${t}</div>`;
+
+views.beranda = () => {
+  $("#sapa").textContent = "Halo, " + (profile.nama || "Siswa").split(" ")[0];
+  const nil = Object.values(subs).filter((s) => s.status === "selesai");
+  const avg = nil.length ? Math.round(nil.reduce((a, s) => a + s.nilai, 0) / nil.length) : "-";
+  const st = [["task", tugas.filter((t) => !subs[t.id]).length, "Tugas belum dikumpulkan"], ["clock", Object.values(subs).filter((s) => s.status !== "selesai").length, "Menunggu nilai"], ["star", avg, "Rata-rata nilai"]];
+  $("#stat").innerHTML = st.map(([i, v, l]) => `<div class="card stat"><div class="ic">${icon(i)}</div><div><b>${v}</b><span class="mute sm">${l}</span></div></div>`).join("");
+  const todo = tugas.filter((t) => !subs[t.id]).slice(0, 4);
+  $("#tugasMini").innerHTML = todo.map(tItem).join("") || kosong("Semua tugas sudah dikumpulkan. Kerja bagus!"); bind("#tugasMini");
+  $("#materiMini").innerHTML = materi.slice(0, 3).map(mCard).join("") || kosong("Belum ada materi.");
+};
+views.materi = () => ($("#materiAll").innerHTML = materi.map(mCard).join("") || kosong("Belum ada materi."));
+views.tugas = () => { $("#tugasAll").innerHTML = tugas.map(tItem).join("") || kosong("Belum ada tugas."); bind("#tugasAll"); };
+views.nilai = () => {
+  const r = Object.values(subs).filter((s) => s.status === "selesai");
+  $("#nilaiTbl").innerHTML = r.length ? `<table><tr><th>Tugas</th><th>Nilai</th><th>Umpan balik</th></tr>${r.map((s) => `<tr><td><b>${esc(s.tugasJudul)}</b></td><td><span class="tag ok">${esc(s.nilai)}</span></td><td class="mute">${esc(s.feedback || "-")}</td></tr>`).join("")}</table>` : kosong("Belum ada nilai.");
+};
+$("#tutup").onclick = () => $("#dlg").close();
+
+function buka(id) {
+  const t = tugas.find((x) => x.id === id), s = subs[id];
+  let h = `<h1 style="font-size:1.35rem">${esc(t.judul)}</h1><p class="mute sm" style="margin:4px 0 14px">${t.deadline ? "Tenggat " + fdate(t.deadline) : ""}</p><p class="pre">${esc(t.instruksi)}</p>`;
+  if (t.fileUrl) h += `<a class="btn ghost sm" style="margin-top:12px" href="${safeUrl(t.fileUrl)}" target="_blank" rel="noopener">Unduh lampiran</a>`;
+  if (s) {
+    h += `<h2 style="margin-top:24px">Jawaban Anda</h2><div class="ans pre">${esc(s.jawaban)}</div>
+      <div class="ans" style="margin-top:12px">${s.status === "selesai" ? `<div class="score">${esc(s.nilai)}</div><p style="margin-top:8px">${esc(s.feedback)}</p>` : '<span class="mute">Menunggu diperiksa guru.</span>'}</div>`;
+    $("#isi").innerHTML = h;
+  } else {
+    h += `<form id="f"><label>Jawaban</label><textarea id="j" required placeholder="Tulis jawaban Anda di sini"></textarea>
+      <label>Tautan file (opsional)</label><input id="l" placeholder="https://drive.google.com/..."><button class="btn full">Kirim jawaban</button></form>`;
+    $("#isi").innerHTML = h;
+    $("#f").onsubmit = async (e) => {
+      e.preventDefault();
+      const d = { tugasId: id, tugasJudul: t.judul, siswaId: user.uid, siswaNama: profile.nama || "Siswa", jawaban: $("#j").value, link: $("#l").value, status: "belum_diperiksa", nilai: null, feedback: "", createdAt: serverTimestamp() };
+      await setDoc(doc(db, "submissions", id + "_" + user.uid), d);
+      subs[id] = d; toast("Jawaban terkirim"); buka(id); views.beranda(); views.tugas();
+    };
+  }
+  $("#dlg").showModal();
+}
+show("beranda");
+</script></body></html>

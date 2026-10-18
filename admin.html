@@ -1,0 +1,185 @@
+<!DOCTYPE html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"><style>:root{--bg:#F5F6FA;--card:#fff;--ink:#161A2E;--mute:#6B7186;--line:#E8EAF2;--brand:#4338CA;--b2:#6366F1;--soft:#EEF0FF;--ok:#12805C;--okbg:#E4F6EE;--warn:#B45309;--warnbg:#FEF3E2;--bad:#C62828}
+*{box-sizing:border-box}
+body{margin:0;font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased;font-size:15px;line-height:1.5}
+a{color:inherit;text-decoration:none}h1,h2,h3,p{margin:0}
+h1{font-size:1.6rem;letter-spacing:-.02em;font-weight:800}h2{font-size:1.05rem;font-weight:700}
+.hide{display:none!important}.mute{color:var(--mute)}.sm{font-size:.85rem}.pre{white-space:pre-wrap}
+svg.i{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:1.15rem;letter-spacing:-.01em}
+.logo i{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--brand),var(--b2));color:#fff;display:grid;place-items:center;font-style:normal}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;background:var(--brand);color:#fff;font:inherit;font-weight:700;font-size:.9rem;padding:10px 20px;border-radius:12px;cursor:pointer;transition:.15s}
+.btn:hover{background:#3730A3}.btn:disabled{opacity:.5}
+.btn.ghost{background:#fff;color:var(--ink);border:1px solid var(--line)}.btn.ghost:hover{background:var(--bg)}
+.btn.full{width:100%;margin-top:18px}.btn.sm{padding:7px 14px;font-size:.82rem}
+label{display:block;font-size:.82rem;font-weight:700;color:var(--mute);margin:16px 0 6px}
+input,select,textarea{width:100%;font:inherit;font-size:.92rem;padding:11px 14px;border:1px solid var(--line);border-radius:12px;background:#fff;outline:none;transition:.15s}
+input:focus,select:focus,textarea:focus{border-color:var(--b2);box-shadow:0 0 0 4px rgba(99,102,241,.14)}
+textarea{min-height:120px;resize:vertical}
+/* app shell */
+.app{display:grid;grid-template-columns:252px 1fr;min-height:100vh}
+.side{position:sticky;top:0;height:100vh;background:#fff;border-right:1px solid var(--line);padding:24px 16px;display:flex;flex-direction:column;gap:28px}
+.side nav{display:flex;flex-direction:column;gap:4px}
+.side nav button{display:flex;align-items:center;gap:12px;border:0;background:none;font:inherit;font-weight:600;color:var(--mute);padding:11px 14px;border-radius:12px;cursor:pointer;text-align:left}
+.side nav button:hover{background:var(--bg);color:var(--ink)}
+.side nav button.on{background:var(--soft);color:var(--brand)}
+.me{margin-top:auto;display:flex;align-items:center;gap:10px;padding:12px;border:1px solid var(--line);border-radius:14px}
+.me .who{flex:1;min-width:0;line-height:1.25}.me b{display:block;font-size:.88rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.me small{color:var(--mute);font-size:.75rem}
+.me button,.mtop button{border:0;background:none;color:var(--mute);cursor:pointer;padding:6px;border-radius:8px}.me button:hover{background:var(--bg);color:var(--bad)}
+.av{width:38px;height:38px;border-radius:50%;background:var(--soft);color:var(--brand);display:grid;place-items:center;font-weight:800;flex:none}
+.main{padding:36px 40px 60px;max-width:1120px;width:100%}
+.mtop{display:none}
+.ph{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;margin-bottom:26px;flex-wrap:wrap}.ph p{color:var(--mute);margin-top:4px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:24px}
+.grid{display:grid;gap:18px}.g3{grid-template-columns:repeat(3,1fr)}.g4{grid-template-columns:repeat(4,1fr)}.g2{grid-template-columns:1fr 1fr}.gm{grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}.gp{grid-template-columns:1.5fr 1fr}.gk{grid-template-columns:1fr 1.4fr}
+.banner{background:linear-gradient(120deg,var(--brand),var(--b2));color:#fff;border-radius:22px;padding:32px;margin-bottom:22px}
+.banner h1{font-size:1.8rem}.banner p{opacity:.85;margin-top:6px}
+.stat{display:flex;align-items:center;gap:16px}
+.stat .ic{width:46px;height:46px;border-radius:14px;background:var(--soft);color:var(--brand);display:grid;place-items:center}
+.stat b{font-size:1.6rem;font-weight:800;display:block;line-height:1.1}
+.sec{display:flex;justify-content:space-between;align-items:center;margin:30px 0 14px}
+.list{list-style:none;margin:0;padding:0}
+.list li{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 0;border-top:1px solid var(--line)}
+.list li:first-child{border-top:0}.list a:hover b{color:var(--brand)}
+.row{display:flex;align-items:center;gap:14px;min-width:0}
+.fi{width:44px;height:44px;border-radius:12px;background:var(--soft);color:var(--brand);display:grid;place-items:center;flex:none}
+.mat{display:flex;flex-direction:column;gap:12px;transition:.15s}.mat:hover{border-color:#C7CBF5;transform:translateY(-2px)}
+.mat p{flex:1}
+.tag{display:inline-block;font-size:.74rem;font-weight:700;padding:3px 10px;border-radius:99px;background:var(--soft);color:var(--brand);white-space:nowrap}
+.tag.ok{background:var(--okbg);color:var(--ok)}.tag.warn{background:var(--warnbg);color:var(--warn)}
+.empty{padding:30px;text-align:center;color:var(--mute)}
+table{width:100%;border-collapse:collapse;font-size:.9rem}th{text-align:left;color:var(--mute);font-size:.8rem;padding:10px 12px;border-bottom:1px solid var(--line)}td{padding:14px 12px;border-bottom:1px solid var(--line)}
+.score{font-size:2.4rem;font-weight:800;color:var(--brand);line-height:1}
+.ans{background:var(--bg);border-radius:14px;padding:18px;margin-top:16px;line-height:1.65}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}.chips button{border:1px solid var(--line);background:#fff;font:inherit;font-size:.78rem;font-weight:600;padding:5px 12px;border-radius:99px;cursor:pointer;color:var(--ink)}.chips button:hover{background:var(--soft);color:var(--brand);border-color:#C7CBF5}
+dialog{border:0;border-radius:22px;max-width:580px;width:calc(100% - 32px);padding:30px;box-shadow:0 30px 80px rgba(20,20,60,.25)}dialog::backdrop{background:rgba(22,26,46,.45)}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:12px 22px;border-radius:12px;font-weight:600;font-size:.9rem;z-index:99}
+.demo{background:#FFF8E1;color:#7A5B00;font-size:.8rem;text-align:center;padding:7px 12px;font-weight:600}
+.err{color:var(--bad);font-size:.85rem;margin-top:12px}
+@media(max-width:860px){
+ .app{grid-template-columns:1fr}.side{position:fixed;top:auto;bottom:0;left:0;right:0;height:auto;z-index:20;flex-direction:row;padding:6px;border-right:0;border-top:1px solid var(--line)}
+ .side .logo,.me{display:none}.side nav{flex-direction:row;width:100%;justify-content:space-around}.side nav button{flex-direction:column;gap:2px;font-size:.7rem;padding:8px 10px}
+ .main{padding:20px 18px 100px}.mtop{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+ .g3,.g2,.gp,.gk{grid-template-columns:1fr}.g4{grid-template-columns:1fr 1fr}.banner{padding:24px}
+}
+</style><title>Admin | DASPRO</title></head><body class="hide">
+<div class="app"><main class="main">
+
+<section id="ringkasan"><div class="ph"><div><h1>Ringkasan</h1><p>Kondisi kelas Anda saat ini.</p></div>
+  <button class="btn" id="keP">Periksa jawaban</button></div>
+  <div class="grid g4" id="angka"></div>
+  <div class="sec"><h2>Antrean pemeriksaan terbaru</h2></div><div class="card"><ul class="list" id="antre"></ul></div></section>
+
+<section id="konten" class="hide"><div class="ph"><div><h1>Materi &amp; tugas</h1><p>Unggah modul, materi, dan tugas untuk siswa.</p></div></div>
+  <div class="grid gk">
+    <form class="card" id="form"><h2>Tambah konten baru</h2>
+      <label>Jenis</label><select id="tipe"><option value="materi">Materi</option><option value="modul">Modul</option><option value="tugas">Tugas</option></select>
+      <label>Judul</label><input id="judul" required placeholder="Contoh: Modul 3 Perulangan">
+      <label id="lDesk">Deskripsi</label><textarea id="desk"></textarea>
+      <div id="wDead" class="hide"><label>Tenggat</label><input id="dead" type="date"></div>
+      <label>File (PDF, PPT, gambar)</label><input id="file" type="file">
+      <button class="btn full" id="simpan">Simpan</button></form>
+    <div class="card"><h2>Sudah diunggah</h2><ul class="list" id="daftar" style="margin-top:8px"></ul></div>
+  </div></section>
+
+<section id="periksa" class="hide"><div class="ph"><div><h1>Periksa jawaban</h1><p id="sisa"></p></div></div>
+  <div id="kosong" class="card empty hide">Semua jawaban sudah diperiksa.</div>
+  <div class="grid gp" id="panel">
+    <div class="card"><div class="row"><div class="av" id="pAv"></div><div><h2 id="pSiswa"></h2><span class="mute sm" id="pTugas"></span></div></div>
+      <div class="ans pre" id="pJawab"></div><a class="btn ghost sm hide" id="pLink" target="_blank" rel="noopener" style="margin-top:14px">Buka tautan file</a></div>
+    <form class="card" id="nilaiForm"><h2>Penilaian</h2>
+      <label>Nilai (0-100)</label><input id="nilai" type="number" min="0" max="100" required>
+      <div class="chips" id="cn"></div>
+      <label>Umpan balik</label><textarea id="fb" style="min-height:90px"></textarea><div class="chips" id="chips"></div>
+      <button class="btn full">Simpan &amp; berikutnya</button><button type="button" class="btn ghost full" id="lewat" style="margin-top:8px">Lewati</button></form>
+  </div></section>
+
+<section id="nilaiS" class="hide"><div class="ph"><div><h1>Rekap nilai</h1><p>Semua jawaban yang sudah dinilai.</p></div>
+  <button class="btn ghost" id="csv">Unduh CSV</button></div><div class="card" style="overflow-x:auto" id="rekap"></div></section>
+
+</main></div>
+<script type="module">
+import { db, storage, collection, getDocs, addDoc, deleteDoc, updateDoc, doc, query, orderBy, serverTimestamp, ref, uploadBytes, getDownloadURL } from "./js/firebase.js";
+import { guard, esc, $, ago, icon, toast } from "./js/common.js";
+
+const views = {};
+const { show } = await guard(true, [["ringkasan", "Ringkasan", "grid"], ["konten", "Materi & Tugas", "upload"], ["periksa", "Periksa", "check"], ["nilaiS", "Rekap nilai", "star"]], views);
+const all = async (c) => (await getDocs(collection(db, c))).docs.map((d) => ({ id: d.id, ...d.data() }));
+const kosong = (t) => `<div class="empty">${t}</div>`;
+$("#keP").onclick = () => show("periksa");
+
+/* Ringkasan */
+views.ringkasan = async () => {
+  const [u, m, t, s] = await Promise.all(["users", "materi", "tugas", "submissions"].map(all));
+  const q = s.filter((x) => x.status === "belum_diperiksa");
+  const a = [["users", u.filter((x) => x.role === "siswa").length, "Siswa"], ["book", m.length, "Materi & modul"], ["task", t.length, "Tugas"], ["clock", q.length, "Belum diperiksa"]];
+  $("#angka").innerHTML = a.map(([i, v, l]) => `<div class="card stat"><div class="ic">${icon(i)}</div><div><b>${v}</b><span class="mute sm">${l}</span></div></div>`).join("");
+  $("#antre").innerHTML = q.slice(0, 5).map((x) => `<li><div class="row"><div class="av">${esc(x.siswaNama[0])}</div><div><b>${esc(x.siswaNama)}</b><div class="mute sm">${esc(x.tugasJudul)}</div></div></div><span class="tag warn">${ago(x.createdAt)}</span></li>`).join("") || kosong("Tidak ada antrean. Semua sudah diperiksa.");
+};
+
+/* Konten */
+$("#tipe").onchange = () => { const t = $("#tipe").value === "tugas"; $("#wDead").classList.toggle("hide", !t); $("#lDesk").textContent = t ? "Instruksi" : "Deskripsi"; };
+views.konten = async () => {
+  const get = async (c) => (await getDocs(query(collection(db, c), orderBy("createdAt", "desc")))).docs.map((d) => ({ id: d.id, col: c, ...d.data() }));
+  const items = [...(await get("materi")), ...(await get("tugas"))];
+  $("#daftar").innerHTML = items.map((i) => `<li><div class="row"><div class="fi">${icon(i.col === "tugas" ? "task" : i.tipe === "modul" ? "book" : "file")}</div><div><b>${esc(i.judul)}</b><div class="mute sm">${i.col === "tugas" ? "Tugas" : esc(i.tipe)}</div></div></div>
+    <button class="btn ghost sm" data-c="${i.col}" data-id="${i.id}" style="color:var(--bad)">${icon("trash")}</button></li>`).join("") || kosong("Belum ada konten. Tambahkan yang pertama.");
+  document.querySelectorAll("#daftar button").forEach((b) => (b.onclick = async () => {
+    if (confirm("Hapus item ini?")) { await deleteDoc(doc(db, b.dataset.c, b.dataset.id)); toast("Dihapus"); views.konten(); }
+  }));
+};
+$("#form").onsubmit = async (e) => {
+  e.preventDefault(); $("#simpan").disabled = true; $("#simpan").textContent = "Mengunggah...";
+  try {
+    let fileUrl = ""; const f = $("#file").files[0];
+    if (f) { const r = ref(storage, `files/${Date.now()}_${f.name}`); await uploadBytes(r, f); fileUrl = await getDownloadURL(r); }
+    const tipe = $("#tipe").value;
+    if (tipe === "tugas") await addDoc(collection(db, "tugas"), { judul: $("#judul").value, instruksi: $("#desk").value, deadline: $("#dead").value, fileUrl, createdAt: serverTimestamp() });
+    else await addDoc(collection(db, "materi"), { judul: $("#judul").value, deskripsi: $("#desk").value, tipe, fileUrl, createdAt: serverTimestamp() });
+    e.target.reset(); $("#tipe").onchange(); toast("Tersimpan"); views.konten();
+  } catch (er) { alert("Gagal menyimpan: " + er.message); }
+  $("#simpan").disabled = false; $("#simpan").textContent = "Simpan";
+};
+
+/* Periksa */
+let queue = [], idx = 0;
+const FB = ["Bagus sekali.", "Sudah baik, lengkapi analisisnya.", "Perlu diperbaiki.", "Jawaban belum sesuai instruksi."];
+$("#chips").innerHTML = FB.map((t) => `<button type="button">${t}</button>`).join("");
+$("#cn").innerHTML = [60, 70, 80, 90, 100].map((n) => `<button type="button">${n}</button>`).join("");
+document.querySelectorAll("#chips button").forEach((b) => (b.onclick = () => { const f = $("#fb"); f.value = (f.value ? f.value + " " : "") + b.textContent; }));
+document.querySelectorAll("#cn button").forEach((b) => (b.onclick = () => ($("#nilai").value = b.textContent)));
+views.periksa = async () => {
+  queue = (await all("submissions")).filter((x) => x.status === "belum_diperiksa").sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0));
+  idx = 0; tampil();
+};
+function tampil() {
+  const c = queue[idx];
+  $("#kosong").classList.toggle("hide", !!c); $("#panel").classList.toggle("hide", !c);
+  $("#sisa").textContent = c ? `Sisa ${queue.length} jawaban untuk diperiksa` : "";
+  if (!c) return;
+  $("#pAv").textContent = c.siswaNama[0]; $("#pSiswa").textContent = c.siswaNama; $("#pTugas").textContent = c.tugasJudul; $("#pJawab").textContent = c.jawaban;
+  const l = $("#pLink"); l.classList.toggle("hide", !/^https?:\/\//i.test(c.link || "")); l.href = c.link || "#";
+  $("#nilai").value = ""; $("#fb").value = "";
+}
+$("#nilaiForm").onsubmit = async (e) => {
+  e.preventDefault(); const c = queue[idx];
+  await updateDoc(doc(db, "submissions", c.id), { nilai: Number($("#nilai").value), feedback: $("#fb").value, status: "selesai" });
+  toast("Nilai tersimpan"); queue.splice(idx, 1); if (idx >= queue.length) idx = 0; tampil();
+};
+$("#lewat").onclick = () => { if (queue.length) { idx = (idx + 1) % queue.length; tampil(); } };
+
+/* Rekap */
+let done = [];
+views.nilaiS = async () => {
+  done = (await all("submissions")).filter((x) => x.status === "selesai");
+  $("#rekap").innerHTML = done.length ? `<table><tr><th>Siswa</th><th>Tugas</th><th>Nilai</th><th>Umpan balik</th></tr>${done.map((x) => `<tr><td><b>${esc(x.siswaNama)}</b></td><td>${esc(x.tugasJudul)}</td><td><span class="tag ok">${esc(x.nilai)}</span></td><td class="mute">${esc(x.feedback || "-")}</td></tr>`).join("")}</table>` : kosong("Belum ada nilai.");
+};
+$("#csv").onclick = async () => {
+  await views.nilaiS();
+  const q = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+  const rows = [["Siswa", "Tugas", "Nilai", "Umpan balik"], ...done.map((x) => [x.siswaNama, x.tugasJudul, x.nilai, x.feedback])];
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([rows.map((r) => r.map(q).join(",")).join("\n")], { type: "text/csv" }));
+  a.download = "rekap-nilai-daspro.csv"; a.click();
+};
+show("ringkasan");
+</script></body></html>
