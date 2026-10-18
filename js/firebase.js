@@ -4,8 +4,6 @@
 // (data contoh, tanpa Firebase) agar Anda bisa melihat tampilannya.
 // ============================================================
 const firebaseConfig = {
- // For Firebase JS SDK v7.20.0 and later, measurementId is optional
-const firebaseConfig = {
   apiKey: "AIzaSyD1hXiHeI33T5C059vttnJaaWqQeV-AzTs",
   authDomain: "daspro-8f6ca.firebaseapp.com",
   projectId: "daspro-8f6ca",
@@ -13,7 +11,6 @@ const firebaseConfig = {
   messagingSenderId: "971620742175",
   appId: "1:971620742175:web:199ef8e1740b0f8efa512a",
   measurementId: "G-F47J6ESVTL"
-};
 };
 
 export const DEMO = firebaseConfig.apiKey.startsWith("ISI");
