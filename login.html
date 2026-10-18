@@ -1,91 +1,103 @@
-<!DOCTYPE html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"><style>:root{--bg:#F5F6FA;--card:#fff;--ink:#161A2E;--mute:#6B7186;--line:#E8EAF2;--brand:#4338CA;--b2:#6366F1;--soft:#EEF0FF;--ok:#12805C;--okbg:#E4F6EE;--warn:#B45309;--warnbg:#FEF3E2;--bad:#C62828}
-*{box-sizing:border-box}
-body{margin:0;font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased;font-size:15px;line-height:1.5}
-a{color:inherit;text-decoration:none}h1,h2,h3,p{margin:0}
-h1{font-size:1.6rem;letter-spacing:-.02em;font-weight:800}h2{font-size:1.05rem;font-weight:700}
-.hide{display:none!important}.mute{color:var(--mute)}.sm{font-size:.85rem}.pre{white-space:pre-wrap}
-svg.i{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
-.logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:1.15rem;letter-spacing:-.01em}
-.logo i{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--brand),var(--b2));color:#fff;display:grid;place-items:center;font-style:normal}
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;background:var(--brand);color:#fff;font:inherit;font-weight:700;font-size:.9rem;padding:10px 20px;border-radius:12px;cursor:pointer;transition:.15s}
-.btn:hover{filter:brightness(.9)}.btn:disabled{opacity:.5}
-.btn.ghost{background:#fff;color:var(--ink);border:1px solid var(--line)}.btn.ghost:hover{background:var(--bg)}
-.btn.full{width:100%;margin-top:18px}.btn.sm{padding:7px 14px;font-size:.82rem}
-label{display:block;font-size:.82rem;font-weight:700;color:var(--mute);margin:16px 0 6px}
-input,select,textarea{width:100%;font:inherit;font-size:.92rem;padding:11px 14px;border:1px solid var(--line);border-radius:12px;background:#fff;outline:none;transition:.15s}
-input:focus,select:focus,textarea:focus{border-color:var(--b2);box-shadow:0 0 0 4px color-mix(in srgb,var(--b2) 20%,transparent)}
-textarea{min-height:120px;resize:vertical}
-/* app shell */
-.app{display:grid;grid-template-columns:252px 1fr;min-height:100vh}
-.side{position:sticky;top:0;height:100vh;background:#fff;border-right:1px solid var(--line);padding:24px 16px;display:flex;flex-direction:column;gap:28px}
-.side nav{display:flex;flex-direction:column;gap:4px}
-.side nav button{display:flex;align-items:center;gap:12px;border:0;background:none;font:inherit;font-weight:600;color:var(--mute);padding:11px 14px;border-radius:12px;cursor:pointer;text-align:left}
-.side nav button:hover{background:var(--bg);color:var(--ink)}
-.side nav button.on{background:var(--soft);color:var(--brand)}
-.me{margin-top:auto;display:flex;align-items:center;gap:10px;padding:12px;border:1px solid var(--line);border-radius:14px}
-.me .who{flex:1;min-width:0;line-height:1.25}.me b{display:block;font-size:.88rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.me small{color:var(--mute);font-size:.75rem}
-.me button,.mtop button{border:0;background:none;color:var(--mute);cursor:pointer;padding:6px;border-radius:8px}.me button:hover{background:var(--bg);color:var(--bad)}
-.av{width:38px;height:38px;border-radius:50%;background:var(--soft);color:var(--brand);display:grid;place-items:center;font-weight:800;flex:none}
-.main{padding:36px 40px 60px;max-width:1120px;width:100%}
-.mtop{display:none}
-.ph{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;margin-bottom:26px;flex-wrap:wrap}.ph p{color:var(--mute);margin-top:4px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:24px}
-.grid{display:grid;gap:18px}.g3{grid-template-columns:repeat(3,1fr)}.g4{grid-template-columns:repeat(4,1fr)}.g2{grid-template-columns:1fr 1fr}.gm{grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}.gp{grid-template-columns:1.5fr 1fr}.gk{grid-template-columns:1fr 1.4fr}
-.banner{background:linear-gradient(120deg,var(--brand),var(--b2));color:#fff;border-radius:22px;padding:32px;margin-bottom:22px}
-.banner h1{font-size:1.8rem}.banner p{opacity:.85;margin-top:6px}
-.stat{display:flex;align-items:center;gap:16px}
-.stat .ic{width:46px;height:46px;border-radius:14px;background:var(--soft);color:var(--brand);display:grid;place-items:center}
-.stat b{font-size:1.6rem;font-weight:800;display:block;line-height:1.1}
-.sec{display:flex;justify-content:space-between;align-items:center;margin:30px 0 14px}
-.list{list-style:none;margin:0;padding:0}
-.list li{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 0;border-top:1px solid var(--line)}
-.list li:first-child{border-top:0}.list a:hover b{color:var(--brand)}
-.row{display:flex;align-items:center;gap:14px;min-width:0}
-.fi{width:44px;height:44px;border-radius:12px;background:var(--soft);color:var(--brand);display:grid;place-items:center;flex:none}
-.mat{display:flex;flex-direction:column;gap:12px;transition:.15s}.mat:hover{border-color:var(--b2);transform:translateY(-2px)}
-.mat p{flex:1}
-.tag{display:inline-block;font-size:.74rem;font-weight:700;padding:3px 10px;border-radius:99px;background:var(--soft);color:var(--brand);white-space:nowrap}
-.tag.ok{background:var(--okbg);color:var(--ok)}.tag.warn{background:var(--warnbg);color:var(--warn)}
-.empty{padding:30px;text-align:center;color:var(--mute)}
-table{width:100%;border-collapse:collapse;font-size:.9rem}th{text-align:left;color:var(--mute);font-size:.8rem;padding:10px 12px;border-bottom:1px solid var(--line)}td{padding:14px 12px;border-bottom:1px solid var(--line)}
-.score{font-size:2.4rem;font-weight:800;color:var(--brand);line-height:1}
-.ans{background:var(--bg);border-radius:14px;padding:18px;margin-top:16px;line-height:1.65}
-.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}.chips button{border:1px solid var(--line);background:#fff;font:inherit;font-size:.78rem;font-weight:600;padding:5px 12px;border-radius:99px;cursor:pointer;color:var(--ink)}.chips button:hover{background:var(--soft);color:var(--brand);border-color:var(--b2)}
-dialog{border:0;border-radius:22px;max-width:580px;width:calc(100% - 32px);padding:30px;box-shadow:0 30px 80px rgba(20,20,60,.25)}dialog::backdrop{background:rgba(22,26,46,.45)}
-.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:12px 22px;border-radius:12px;font-weight:600;font-size:.9rem;z-index:99}
-.demo{background:#FFF8E1;color:#7A5B00;font-size:.8rem;text-align:center;padding:7px 12px;font-weight:600}
-.err{color:var(--bad);font-size:.85rem;margin-top:12px}
-@media(max-width:860px){
- .app{grid-template-columns:1fr}.side{position:fixed;top:auto;bottom:0;left:0;right:0;height:auto;z-index:20;flex-direction:row;padding:6px;border-right:0;border-top:1px solid var(--line)}
- .side .logo,.me{display:none}.side nav{flex-direction:row;width:100%;justify-content:space-around}.side nav button{flex-direction:column;gap:2px;font-size:.7rem;padding:8px 10px}
- .main{padding:20px 18px 100px}.mtop{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
- .g3,.g2,.gp,.gk{grid-template-columns:1fr}.g4{grid-template-columns:1fr 1fr}.banner{padding:24px}
-}
-</style><title>Masuk | DASPRO</title>
+<!DOCTYPE html>
+<html lang="id"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<title>Masuk | DASPRO</title>
 <style>
-.split{display:grid;grid-template-columns:1fr 1fr;min-height:100vh}
-.left{background:linear-gradient(150deg,color-mix(in srgb,var(--brand) 65%,#000),var(--brand) 55%,var(--b2));color:#fff;padding:48px;display:flex;flex-direction:column;justify-content:space-between}
-.left h2{font-size:2.2rem;line-height:1.15;letter-spacing:-.03em;font-weight:800;max-width:380px}
-.left li{display:flex;gap:10px;align-items:center;margin-top:12px;opacity:.9}.left ul{list-style:none;padding:0;margin:24px 0 0}
-.right{display:flex;align-items:center;justify-content:center;padding:32px;background:#fff}.box{width:100%;max-width:370px}
-.seg{display:grid;grid-template-columns:1fr 1fr;background:var(--bg);padding:4px;border-radius:12px;margin:22px 0 4px}
-.seg button{border:0;background:none;font:inherit;font-weight:700;padding:9px;border-radius:9px;cursor:pointer;color:var(--mute)}.seg button.on{background:#fff;color:var(--brand);box-shadow:0 1px 4px rgba(0,0,0,.1)}
-@media(max-width:860px){.split{grid-template-columns:1fr}.left{display:none}}
-</style></head><body>
-<div class="split">
-<div class="left"><a href="index.html" class="logo"><i style="background:rgba(255,255,255,.18)">D</i>DASPRO</a>
-  <div><h2>Satu tempat untuk belajar dan menilai.</h2><ul><li><span data-ic="check"></span>Modul dan materi selalu tersedia</li><li><span data-ic="check"></span>Kumpulkan tugas tanpa ribet</li><li><span data-ic="check"></span>Nilai dan umpan balik langsung terlihat</li></ul></div>
-  <span style="opacity:.6;font-size:.85rem">Daus Academic &amp; Skills Platform</span></div>
-<div class="right"><div class="box">
-  <h1 id="judul">Selamat datang</h1><p class="mute" id="sub">Masuk untuk melanjutkan belajar.</p>
-  <div class="seg"><button id="tMasuk" class="on" type="button">Masuk</button><button id="tDaftar" type="button">Daftar siswa</button></div>
-  <form id="form">
-    <div id="namaWrap" class="hide"><label>Nama lengkap</label><input id="nama" placeholder="Nama Anda"></div>
-    <label>Email</label><input id="email" type="email" placeholder="nama@email.com" required>
-    <label>Kata sandi</label><input id="pass" type="password" minlength="6" placeholder="Minimal 6 karakter" required>
-    <p class="err" id="err"></p>
-    <button class="btn full" id="kirim">Masuk</button>
-  </form></div></div></div>
+:root{--bg:#F5F6FA;--ink:#161A2E;--mute:#6B7186;--line:#E8EAF2;--brand:#4338CA;--b2:#6366F1;--soft:#EEF0FF;--bad:#C62828}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;color:var(--ink);-webkit-font-smoothing:antialiased;font-size:15px;line-height:1.5;
+ background:linear-gradient(160deg,color-mix(in srgb,var(--brand) 55%,#000) 0%,var(--brand) 55%,var(--b2) 100%) fixed;overflow-x:hidden}
+a{color:inherit;text-decoration:none}h1,h2,p{margin:0}
+.hide{display:none!important}.mute{color:var(--mute)}
+svg.i{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.demo{position:relative;z-index:5;background:#FFF8E1;color:#7A5B00;font-size:.8rem;text-align:center;padding:7px 12px;font-weight:600}
+
+/* latar bergerak */
+.bg{position:fixed;inset:0;pointer-events:none;overflow:hidden}
+.bg span{position:absolute;border-radius:50%;filter:blur(60px);opacity:.5;animation:float 14s ease-in-out infinite}
+.bg .x1{width:340px;height:340px;background:var(--b2);top:-80px;left:-80px}
+.bg .x2{width:300px;height:300px;background:#fff;opacity:.16;bottom:60px;right:-90px;animation-delay:-5s}
+.bg .x3{width:240px;height:240px;background:color-mix(in srgb,var(--b2) 60%,#fff);top:40%;left:55%;animation-delay:-9s}
+@keyframes float{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(30px,-40px) scale(1.12)}}
+
+/* tata letak: sama di desktop dan HP */
+.page{position:relative;z-index:1;width:100%;max-width:440px;margin:0 auto;padding:36px 20px 96px;min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center}
+.logo{display:inline-flex;align-items:center;gap:10px;font-weight:800;font-size:1.2rem;color:#fff;letter-spacing:-.01em}
+.logo i{width:42px;height:42px;border-radius:13px;background:rgba(255,255,255,.2);color:#fff;display:grid;place-items:center;font-style:normal;overflow:hidden;border:1px solid rgba(255,255,255,.3)}
+.hl{margin-top:26px;color:#fff;font-size:clamp(1.9rem,7.5vw,2.6rem);font-weight:800;letter-spacing:-.03em;line-height:1.12;min-height:2.3em}
+.cur{display:inline-block;width:3px;height:.9em;background:#fff;margin-left:4px;vertical-align:-.1em;animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.lead{color:rgba(255,255,255,.8);margin:8px 0 22px;font-size:.98rem}
+
+.card{width:100%;background:#fff;border-radius:26px;padding:28px 26px;text-align:left;box-shadow:0 30px 70px rgba(10,10,50,.35)}
+.card h1{font-size:1.45rem;font-weight:800;letter-spacing:-.02em}
+.seg{display:grid;grid-template-columns:1fr 1fr;background:var(--bg);padding:4px;border-radius:13px;margin:20px 0 2px}
+.seg button{border:0;background:none;font:inherit;font-weight:700;font-size:.9rem;padding:10px;border-radius:10px;cursor:pointer;color:var(--mute);transition:.15s}
+.seg button.on{background:#fff;color:var(--brand);box-shadow:0 1px 5px rgba(0,0,0,.12)}
+label{display:block;font-size:.8rem;font-weight:700;color:var(--mute);margin:16px 0 6px}
+input{width:100%;font:inherit;font-size:.95rem;padding:12px 15px;border:1px solid var(--line);border-radius:13px;background:#fff;outline:none;transition:.15s}
+input:focus{border-color:var(--b2);box-shadow:0 0 0 4px color-mix(in srgb,var(--b2) 20%,transparent)}
+.btn{width:100%;margin-top:20px;display:inline-flex;align-items:center;justify-content:center;border:0;background:linear-gradient(120deg,var(--brand),var(--b2));color:#fff;font:inherit;font-weight:700;font-size:.95rem;padding:13px 20px;border-radius:13px;cursor:pointer;transition:.15s;box-shadow:0 8px 20px color-mix(in srgb,var(--brand) 40%,transparent)}
+.btn:hover{filter:brightness(.93);transform:translateY(-1px)}.btn:disabled{opacity:.55;transform:none}
+.err{color:var(--bad);font-size:.85rem;margin-top:12px}
+
+.chips2{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:22px}
+.chips2 span{display:inline-flex;align-items:center;gap:7px;color:#fff;font-size:.8rem;font-weight:600;padding:7px 14px;border-radius:99px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.22);backdrop-filter:blur(6px)}
+
+/* teks berjalan */
+.ticker{position:fixed;left:0;right:0;bottom:0;z-index:4;background:rgba(10,12,40,.55);backdrop-filter:blur(8px);border-top:1px solid rgba(255,255,255,.15);overflow:hidden;padding:12px 0}
+.track{display:flex;width:max-content;animation:run 38s linear infinite}
+.track span{white-space:nowrap;color:#fff;font-weight:600;font-size:.85rem;padding-right:8px}
+@keyframes run{to{transform:translateX(-50%)}}
+.ticker:hover .track{animation-play-state:paused}
+@media(prefers-reduced-motion:reduce){.track,.bg span,.cur{animation:none}}
+@media(min-width:900px){.page{max-width:480px}.card{padding:32px 30px}}
+</style></head>
+<body>
+<div class="bg"><span class="x1"></span><span class="x2"></span><span class="x3"></span></div>
+
+<main class="page">
+  <a href="index.html" class="logo"><i>D</i>DASPRO</a>
+  <h2 class="hl">Belajar <span id="tw"></span><span class="cur"></span></h2>
+  <p class="lead">Satu tempat untuk modul, tugas, dan nilai.</p>
+
+  <section class="card">
+    <h1 id="judul">Selamat datang</h1><p class="mute" id="sub">Masuk untuk melanjutkan belajar.</p>
+    <div class="seg"><button id="tMasuk" class="on" type="button">Masuk</button><button id="tDaftar" type="button">Daftar siswa</button></div>
+    <form id="form">
+      <div id="namaWrap" class="hide"><label>Nama lengkap</label><input id="nama" placeholder="Nama Anda" autocomplete="name"></div>
+      <label>Email</label><input id="email" type="email" placeholder="nama@email.com" autocomplete="email" required>
+      <label>Kata sandi</label><input id="pass" type="password" minlength="6" placeholder="Minimal 6 karakter" autocomplete="current-password" required>
+      <p class="err" id="err"></p>
+      <button class="btn" id="kirim">Masuk</button>
+    </form>
+  </section>
+
+  <div class="chips2"><span><span data-ic="book"></span>Materi &amp; modul</span><span><span data-ic="task"></span>Tugas</span><span><span data-ic="star"></span>Nilai</span></div>
+</main>
+
+<div class="ticker"><div class="track" id="track"></div></div>
+
+<!-- Animasi (skrip biasa, tetap jalan walau Firebase belum terhubung) -->
+<script>
+(function () {
+  var words = ["tertata.", "kapan saja.", "lebih mudah.", "bersama guru."], w = 0, c = 0, del = false, el = document.getElementById("tw");
+  function tick() {
+    var cur = words[w];
+    el.textContent = cur.slice(0, c);
+    if (!del && c === cur.length) { del = true; return setTimeout(tick, 1500); }
+    if (del && c === 0) { del = false; w = (w + 1) % words.length; return setTimeout(tick, 350); }
+    c += del ? -1 : 1;
+    setTimeout(tick, del ? 45 : 85);
+  }
+  tick();
+  var t = "\u2726 Selamat datang di DASPRO  \u2022  Daus Academic & Skills Platform  \u2022  Materi & modul selalu tersedia  \u2022  Kumpulkan tugas tanpa ribet  \u2022  Nilai dan umpan balik langsung terlihat  \u2022  ";
+  document.getElementById("track").innerHTML = new Array(4 + 1).join("<span>" + t.replace(/&/g, "&amp;") + t.replace(/&/g, "&amp;") + "</span>");
+})();
+</script>
+
 <script type="module">
 import { auth, db, signInWithEmailAndPassword, createUserWithEmailAndPassword, doc, getDoc, setDoc, serverTimestamp } from "./js/firebase.js";
 import { $ } from "./js/common.js";
@@ -96,6 +108,7 @@ function mode(d) {
   $("#kirim").textContent = d ? "Buat akun" : "Masuk";
   $("#sub").textContent = d ? "Daftar sebagai siswa untuk mulai belajar." : "Masuk untuk melanjutkan belajar.";
   $("#namaWrap").classList.toggle("hide", !d); $("#nama").required = d;
+  $("#pass").autocomplete = d ? "new-password" : "current-password";
 }
 $("#tMasuk").onclick = () => mode(false); $("#tDaftar").onclick = () => mode(true);
 if (location.hash === "#daftar") mode(true);
@@ -105,16 +118,3 @@ $("#form").onsubmit = async (e) => {
     if (daftar) {
       const c = await createUserWithEmailAndPassword(auth, $("#email").value, $("#pass").value);
       await setDoc(doc(db, "users", c.user.uid), { nama: $("#nama").value, email: $("#email").value, role: "siswa", createdAt: serverTimestamp() });
-      location.href = "dashboard.html";
-    } else {
-      const c = await signInWithEmailAndPassword(auth, $("#email").value, $("#pass").value);
-      const p = (await getDoc(doc(db, "users", c.user.uid))).data();
-      location.href = p?.role === "admin" ? "admin.html" : "dashboard.html";
-    }
-  } catch (er) {
-    const m = { "auth/email-already-in-use": "Email sudah terdaftar. Silakan masuk.", "auth/weak-password": "Kata sandi minimal 6 karakter.", "auth/invalid-credential": "Email atau kata sandi salah." };
-    $("#err").textContent = m[er.code] || "Terjadi kesalahan. Periksa konfigurasi Firebase.";
-    $("#kirim").disabled = false;
-  }
-};
-</script></body></html>
