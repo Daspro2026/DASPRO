@@ -69,17 +69,20 @@ dialog{border:0;border-radius:22px;max-width:580px;width:calc(100% - 32px);paddi
     <div class="sec"><h2>Materi terbaru</h2></div><div class="grid gm" id="materiMini"></div></section>
   <section id="materi" class="hide"><div class="ph"><div><h1>Materi &amp; modul</h1><p>Semua bahan belajar dari guru.</p></div></div><div class="grid gm" id="materiAll"></div></section>
   <section id="tugas" class="hide"><div class="ph"><div><h1>Tugas</h1><p>Kumpulkan sebelum tenggat.</p></div></div><div class="card"><ul class="list" id="tugasAll"></ul></div></section>
+  <section id="kuis" class="hide"><div class="ph"><div><h1>Kuis</h1><p>Kerjakan soal pilihan ganda. Nilai langsung keluar setelah dikirim.</p></div></div>
+    <style>.opt{display:flex;align-items:center;gap:10px;padding:11px 14px;border:1px solid var(--line);border-radius:12px;cursor:pointer;margin:8px 0 0;font-size:.92rem;font-weight:500;color:var(--ink)}.opt input{width:auto;padding:0;accent-color:var(--brand);flex:none}.opt:has(input:checked){border-color:var(--brand);background:var(--soft)}</style>
+    <div class="card"><ul class="list" id="kuisAll"></ul></div></section>
   <section id="nilai" class="hide"><div class="ph"><div><h1>Nilai</h1><p>Hasil penilaian dan umpan balik guru.</p></div></div><div class="card" style="overflow-x:auto" id="nilaiTbl"></div></section>
 </main></div>
 <dialog id="dlg"><div id="isi"></div><button class="btn ghost full" id="tutup">Tutup</button></dialog>
 <script type="module">
-import { db, collection, getDocs, query, where, orderBy, doc, setDoc, serverTimestamp } from "./js/firebase.js";
+import { auth, db, collection, getDocs, query, where, orderBy, doc, setDoc, serverTimestamp } from "./js/firebase.js";
 import { guard, esc, $, safeUrl, fdate, icon, toast } from "./js/common.js";
 
 const views = {};
-const { user, profile, show } = await guard(false, [["beranda", "Beranda", "home"], ["materi", "Materi", "book"], ["tugas", "Tugas", "task"], ["nilai", "Nilai", "star"]], views);
+const { user, profile, show } = await guard(false, [["beranda", "Beranda", "home"], ["materi", "Materi", "book"], ["tugas", "Tugas", "task"], ["kuis", "Kuis", "edit"], ["nilai", "Nilai", "star"]], views);
 const load = async (c) => (await getDocs(query(collection(db, c), orderBy("createdAt", "desc")))).docs.map((d) => ({ id: d.id, ...d.data() }));
-const [materi, tugas] = [await load("materi"), await load("tugas")];
+const [materi, tugas, kuis] = [await load("materi"), await load("tugas"), await load("kuis")];
 const subs = {};
 (await getDocs(query(collection(db, "submissions"), where("siswaId", "==", user.uid)))).docs.forEach((d) => (subs[d.data().tugasId] = d.data()));
 
@@ -129,6 +132,3 @@ function buka(id) {
     };
   }
   $("#dlg").showModal();
-}
-show("beranda");
-</script></body></html>
