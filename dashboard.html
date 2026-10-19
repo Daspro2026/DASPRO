@@ -65,13 +65,13 @@ dialog{border:0;border-radius:22px;max-width:580px;width:calc(100% - 32px);paddi
 <div class="app"><main class="main">
   <section id="beranda"><div class="banner"><h1 id="sapa"></h1><p>Berikut ringkasan belajar Anda hari ini.</p></div>
     <div class="grid g3" id="stat"></div>
-    <div class="sec"><h2>Tugas untuk Anda</h2></div><div class="card"><ul class="list" id="tugasMini"></ul></div>
-    <div class="sec"><h2>Materi terbaru</h2></div><div class="grid gm" id="materiMini"></div></section>
-  <section id="materi" class="hide"><div class="ph"><div><h1>Materi &amp; modul</h1><p>Semua bahan belajar dari guru.</p></div></div><div class="grid gm" id="materiAll"></div></section>
-  <section id="tugas" class="hide"><div class="ph"><div><h1>Tugas</h1><p>Kumpulkan sebelum tenggat.</p></div></div><div class="card"><ul class="list" id="tugasAll"></ul></div></section>
-  <section id="kuis" class="hide"><div class="ph"><div><h1>Kuis</h1><p>Kerjakan soal pilihan ganda. Nilai langsung keluar setelah dikirim.</p></div></div>
-    <style>.opt{display:flex;align-items:center;gap:10px;padding:11px 14px;border:1px solid var(--line);border-radius:12px;cursor:pointer;margin:8px 0 0;font-size:.92rem;font-weight:500;color:var(--ink)}.opt input{width:auto;padding:0;accent-color:var(--brand);flex:none}.opt:has(input:checked){border-color:var(--brand);background:var(--soft)}</style>
-    <div class="card"><ul class="list" id="kuisAll"></ul></div></section>
+    <div class="sec"><h2>Perlu dikerjakan</h2></div><div class="card"><ul class="list" id="tugasMini"></ul></div>
+    <div class="sec"><h2>Mata pelajaran</h2></div><div class="grid gm" id="materiMini"></div></section>
+  <section id="mapel" class="hide"><div class="ph"><div><h1>Mata pelajaran</h1><p>Pilih mata pelajaran untuk melihat materi, tugas, dan kuisnya.</p></div></div><div class="grid gm" id="mapelAll"></div></section>
+  <section id="detail" class="hide"><button class="btn ghost sm" id="dBack" style="margin-bottom:16px">&larr; Semua mata pelajaran</button>
+    <div class="ph"><div><h1 id="dNama"></h1><p>Materi, tugas, dan kuis mata pelajaran ini.</p></div></div>
+    <style>#dTabs button{padding:8px 16px;font-size:.85rem}#dTabs button.on{background:var(--soft);color:var(--brand);border-color:var(--b2)}.opt{display:flex;align-items:center;gap:10px;padding:11px 14px;border:1px solid var(--line);border-radius:12px;cursor:pointer;margin:8px 0 0;font-size:.92rem;font-weight:500;color:var(--ink)}.opt input{width:auto;padding:0;accent-color:var(--brand);flex:none}.opt:has(input:checked){border-color:var(--brand);background:var(--soft)}</style>
+    <div class="chips" id="dTabs" style="margin:0 0 20px"></div><div id="dIsi"></div></section>
   <section id="nilai" class="hide"><div class="ph"><div><h1>Nilai</h1><p>Hasil penilaian dan umpan balik guru.</p></div></div><div class="card" style="overflow-x:auto" id="nilaiTbl"></div></section>
 </main></div>
 <dialog id="dlg"><div id="isi"></div><button class="btn ghost full" id="tutup">Tutup</button></dialog>
@@ -80,9 +80,10 @@ import { auth, db, collection, getDocs, query, where, orderBy, doc, setDoc, serv
 import { guard, esc, $, safeUrl, fdate, icon, toast } from "./js/common.js";
 
 const views = {};
-const { user, profile, show } = await guard(false, [["beranda", "Beranda", "home"], ["materi", "Materi", "book"], ["tugas", "Tugas", "task"], ["kuis", "Kuis", "edit"], ["nilai", "Nilai", "star"]], views);
+const { user, profile, show } = await guard(false, [["beranda", "Beranda", "home"], ["mapel", "Mata pelajaran", "book"], ["nilai", "Nilai", "star"]], views);
 const load = async (c) => (await getDocs(query(collection(db, c), orderBy("createdAt", "desc")))).docs.map((d) => ({ id: d.id, ...d.data() }));
 const [materi, tugas, kuis] = [await load("materi"), await load("tugas"), await load("kuis")];
+const mapelList = (await load("mapel")).reverse();
 const subs = {};
 (await getDocs(query(collection(db, "submissions"), where("siswaId", "==", user.uid)))).docs.forEach((d) => (subs[d.data().tugasId] = d.data()));
 
@@ -94,21 +95,62 @@ const tItem = (t) => `<li><a href="#" data-id="${t.id}" class="row"><div class="
 const bind = (root) => document.querySelectorAll(root + " a[data-id]").forEach((a) => (a.onclick = (e) => { e.preventDefault(); buka(a.dataset.id); }));
 const kosong = (t) => `<div class="empty">${t}</div>`;
 
+const mapelMap = Object.fromEntries(mapelList.map((m) => [m.id, m]));
+const mid = (x) => (x.mapelId && mapelMap[x.mapelId] ? x.mapelId : "");
+const namaMapel = (x) => mapelMap[mid(x)]?.nama || "Umum";
+const allMapel = () => { const l = [...mapelList]; if ([...materi, ...tugas, ...kuis].some((x) => !mid(x))) l.push({ id: "", nama: "Umum" }); return l; };
+const inMapel = (arr, id) => arr.filter((x) => mid(x) === id);
+let curMapel = null, curTab = "materi";
+
+const mapelCard = (m) => {
+  const M = inMapel(materi, m.id), T = inMapel(tugas, m.id), K = inMapel(kuis, m.id);
+  const pending = [...T, ...K].filter((x) => !subs[x.id]).length;
+  return `<div class="card mat" data-m="${esc(m.id)}" style="cursor:pointer"><div class="row"><div class="fi">${icon("book")}</div>${pending ? `<span class="tag warn">${pending} belum dikerjakan</span>` : '<span class="tag ok">Terkini</span>'}</div>
+    <div><h2>${esc(m.nama)}</h2></div><p class="mute sm">${M.length} materi · ${T.length} tugas · ${K.length} kuis</p></div>`;
+};
+const bindMapel = (root) => document.querySelectorAll(root + " [data-m]").forEach((c) => (c.onclick = () => openMapel(c.dataset.m)));
+const kItem = (k) => {
+  const s = subs[k.id];
+  const tag = s ? `<span class="tag ok">Nilai ${esc(s.nilai)}</span>` : '<span class="tag warn">Belum dikerjakan</span>';
+  return `<li><a href="#" data-k="${k.id}" class="row"><div class="fi">${icon("edit")}</div><div><b>${esc(k.judul)}</b><div class="mute sm">${(k.soal || []).length} soal${k.deskripsi ? " · " + esc(k.deskripsi) : ""}</div></div></a>${tag}</li>`;
+};
+
 views.beranda = () => {
   $("#sapa").textContent = "Halo, " + (profile.nama || "Siswa").split(" ")[0];
   const nil = Object.values(subs).filter((s) => s.status === "selesai");
   const avg = nil.length ? Math.round(nil.reduce((a, s) => a + s.nilai, 0) / nil.length) : "-";
-  const st = [["task", tugas.filter((t) => !subs[t.id]).length, "Tugas belum dikumpulkan"], ["clock", Object.values(subs).filter((s) => s.status !== "selesai").length, "Menunggu nilai"], ["star", avg, "Rata-rata nilai"]];
+  const todo = [...tugas.map((t) => ({ ...t, _k: "tugas" })), ...kuis.map((k) => ({ ...k, _k: "kuis" }))].filter((x) => !subs[x.id]);
+  const st = [["task", todo.length, "Perlu dikerjakan"], ["clock", Object.values(subs).filter((s) => s.status !== "selesai").length, "Menunggu nilai"], ["star", avg, "Rata-rata nilai"]];
   $("#stat").innerHTML = st.map(([i, v, l]) => `<div class="card stat"><div class="ic">${icon(i)}</div><div><b>${v}</b><span class="mute sm">${l}</span></div></div>`).join("");
-  const todo = tugas.filter((t) => !subs[t.id]).slice(0, 4);
-  $("#tugasMini").innerHTML = todo.map(tItem).join("") || kosong("Semua tugas sudah dikumpulkan. Kerja bagus!"); bind("#tugasMini");
-  $("#materiMini").innerHTML = materi.slice(0, 3).map(mCard).join("") || kosong("Belum ada materi.");
+  $("#tugasMini").innerHTML = todo.slice(0, 5).map((x) => `<li><a href="#" data-x="${x.id}" data-t="${x._k}" class="row"><div class="fi">${icon(x._k === "kuis" ? "edit" : "task")}</div><div><b>${esc(x.judul)}</b><div class="mute sm">${esc(namaMapel(x))}${x.deadline ? " · Tenggat " + fdate(x.deadline) : ""}</div></div></a><span class="tag warn">${x._k === "kuis" ? "Kuis" : "Tugas"}</span></li>`).join("") || kosong("Semua sudah dikerjakan. Kerja bagus!");
+  document.querySelectorAll("#tugasMini a").forEach((a) => (a.onclick = (e) => { e.preventDefault(); a.dataset.t === "kuis" ? kerjakan(a.dataset.x) : buka(a.dataset.x); }));
+  $("#materiMini").innerHTML = allMapel().slice(0, 3).map(mapelCard).join("") || kosong("Belum ada mata pelajaran dari guru.");
+  bindMapel("#materiMini");
 };
-views.materi = () => ($("#materiAll").innerHTML = materi.map(mCard).join("") || kosong("Belum ada materi."));
-views.tugas = () => { $("#tugasAll").innerHTML = tugas.map(tItem).join("") || kosong("Belum ada tugas."); bind("#tugasAll"); };
+views.mapel = () => { $("#mapelAll").innerHTML = allMapel().map(mapelCard).join("") || kosong("Belum ada mata pelajaran dari guru."); bindMapel("#mapelAll"); };
+function openMapel(id) {
+  curMapel = id; curTab = "materi"; show("detail");
+  document.querySelector('.side nav [data-t="mapel"]')?.classList.add("on");
+}
+views.detail = () => renderDetail();
+const refreshDetail = () => { if (!$("#detail").classList.contains("hide")) renderDetail(); };
+$("#dBack").onclick = () => show("mapel");
+function renderDetail() {
+  if (curMapel === null) return;
+  const m = allMapel().find((x) => x.id === curMapel) || { nama: "Umum" };
+  const M = inMapel(materi, curMapel), T = inMapel(tugas, curMapel), K = inMapel(kuis, curMapel);
+  $("#dNama").textContent = m.nama;
+  $("#dTabs").innerHTML = [["materi", "Materi & modul", M.length], ["tugas", "Tugas", T.length], ["kuis", "Kuis", K.length]]
+    .map(([k, l, n]) => `<button type="button" data-d="${k}" class="${curTab === k ? "on" : ""}">${l} (${n})</button>`).join("");
+  document.querySelectorAll("#dTabs button").forEach((b) => (b.onclick = () => { curTab = b.dataset.d; renderDetail(); }));
+  const box = $("#dIsi");
+  if (curTab === "materi") box.innerHTML = M.length ? `<div class="grid gm">${M.map(mCard).join("")}</div>` : `<div class="card">${kosong("Belum ada materi di mata pelajaran ini.")}</div>`;
+  else if (curTab === "tugas") { box.innerHTML = `<div class="card">${T.length ? `<ul class="list">${T.map(tItem).join("")}</ul>` : kosong("Belum ada tugas di mata pelajaran ini.")}</div>`; bind("#dIsi"); }
+  else { box.innerHTML = `<div class="card">${K.length ? `<ul class="list">${K.map(kItem).join("")}</ul>` : kosong("Belum ada kuis di mata pelajaran ini.")}</div>`; document.querySelectorAll("#dIsi a[data-k]").forEach((a) => (a.onclick = (e) => { e.preventDefault(); kerjakan(a.dataset.k); })); }
+}
 views.nilai = () => {
-  const r = Object.values(subs).filter((s) => s.status === "selesai");
-  $("#nilaiTbl").innerHTML = r.length ? `<table><tr><th>Tugas</th><th>Nilai</th><th>Umpan balik</th></tr>${r.map((s) => `<tr><td><b>${esc(s.tugasJudul)}</b></td><td><span class="tag ok">${esc(s.nilai)}</span></td><td class="mute">${esc(s.feedback || "-")}</td></tr>`).join("")}</table>` : kosong("Belum ada nilai.");
+  const r = Object.entries(subs).filter(([, s]) => s.status === "selesai");
+  $("#nilaiTbl").innerHTML = r.length ? `<table><tr><th>Mapel</th><th>Tugas / kuis</th><th>Nilai</th><th>Umpan balik</th></tr>${r.map(([id, s]) => { const src = [...tugas, ...kuis].find((x) => x.id === id); return `<tr><td>${esc(src ? namaMapel(src) : "Umum")}</td><td><b>${esc(s.tugasJudul)}</b></td><td><span class="tag ok">${esc(s.nilai)}</span></td><td class="mute">${esc(s.feedback || "-")}</td></tr>`; }).join("")}</table>` : kosong("Belum ada nilai.");
 };
 $("#tutup").onclick = () => $("#dlg").close();
 
@@ -126,21 +168,13 @@ function buka(id) {
     $("#isi").innerHTML = h;
     $("#f").onsubmit = async (e) => {
       e.preventDefault();
-      const d = { tugasId: id, tugasJudul: t.judul, siswaId: user.uid, siswaNama: profile.nama || "Siswa", jawaban: $("#j").value, link: $("#l").value, status: "belum_diperiksa", nilai: null, feedback: "", createdAt: serverTimestamp() };
+      const d = { tugasId: id, tugasJudul: t.judul, siswaId: user.uid, siswaNama: profile.nama || "Siswa", mapelId: t.mapelId || "", jawaban: $("#j").value, link: $("#l").value, status: "belum_diperiksa", nilai: null, feedback: "", createdAt: serverTimestamp() };
       await setDoc(doc(db, "submissions", id + "_" + user.uid), d);
-      subs[id] = d; toast("Jawaban terkirim"); buka(id); views.beranda(); views.tugas();
+      subs[id] = d; toast("Jawaban terkirim"); buka(id); views.beranda(); refreshDetail();
     };
   }
   $("#dlg").showModal();
 }
-views.kuis = () => {
-  $("#kuisAll").innerHTML = kuis.map((k) => {
-    const s = subs[k.id];
-    const tag = s ? `<span class="tag ok">Nilai ${esc(s.nilai)}</span>` : '<span class="tag warn">Belum dikerjakan</span>';
-    return `<li><a href="#" data-k="${k.id}" class="row"><div class="fi">${icon("edit")}</div><div><b>${esc(k.judul)}</b><div class="mute sm">${(k.soal || []).length} soal${k.deskripsi ? " · " + esc(k.deskripsi) : ""}</div></div></a>${tag}</li>`;
-  }).join("") || kosong("Belum ada kuis.");
-  document.querySelectorAll("#kuisAll a").forEach((a) => (a.onclick = (e) => { e.preventDefault(); kerjakan(a.dataset.k); }));
-};
 function kerjakan(id) {
   const k = kuis.find((x) => x.id === id), s = subs[id];
   if (s) {
@@ -163,7 +197,7 @@ function kerjakan(id) {
       const res = await r.json();
       if (!r.ok) throw new Error(res.error || "Gagal mengirim jawaban");
       subs[id] = { status: "selesai", nilai: res.nilai, feedback: res.feedback, tugasJudul: "Kuis: " + k.judul };
-      views.kuis(); kerjakan(id);
+      views.beranda(); refreshDetail(); kerjakan(id);
     } catch (er) { alert(er.message); btn.disabled = false; btn.textContent = "Kirim jawaban"; }
   };
   $("#dlg").showModal();
