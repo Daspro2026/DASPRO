@@ -77,14 +77,15 @@ dialog{border:0;border-radius:22px;max-width:580px;width:calc(100% - 32px);paddi
     <div class="card"><h2>Daftar mata pelajaran</h2><ul class="list" id="mDaftar" style="margin-top:8px"></ul></div>
   </div></section>
 
-<section id="konten" class="hide"><div class="ph"><div><h1>Materi &amp; tugas</h1><p>Unggah modul, materi, dan tugas untuk siswa.</p></div></div>
+<section id="konten" class="hide"><div class="ph"><div><h1>Materi &amp; tugas</h1><p>Tambahkan modul, materi, dan tugas. File disimpan di Google Drive, lalu tautannya ditempel di sini.</p></div></div>
   <div class="grid gk">
     <form class="card" id="form"><h2>Tambah konten baru</h2><label>Mata pelajaran</label><select id="tMapel"></select>
       <label>Jenis</label><select id="tipe"><option value="materi">Materi</option><option value="modul">Modul</option><option value="tugas">Tugas</option></select>
       <label>Judul</label><input id="judul" required placeholder="Contoh: Modul 3 Perulangan">
       <label id="lDesk">Deskripsi</label><textarea id="desk"></textarea>
       <div id="wDead" class="hide"><label>Tenggat</label><input id="dead" type="date"></div>
-      <label>File (PDF, PPT, gambar)</label><input id="file" type="file">
+      <label>Tautan file (Google Drive, YouTube, dll)</label><input id="link" type="url" placeholder="https://drive.google.com/...">
+      <p class="mute sm" style="margin-top:6px">Di Google Drive: klik kanan file &gt; Bagikan &gt; Akses umum: <b>Siapa saja yang memiliki link</b> (Pelihat), lalu Salin link.</p>
       <button class="btn full" id="simpan">Simpan</button></form>
     <div class="card"><div class="row" style="justify-content:space-between"><h2>Sudah diunggah</h2><select id="cFilter" style="width:auto;max-width:200px"></select></div><ul class="list" id="daftar" style="margin-top:8px"></ul></div>
   </div></section>
@@ -134,7 +135,7 @@ dialog{border:0;border-radius:22px;max-width:580px;width:calc(100% - 32px);paddi
 
 </main></div>
 <script type="module">
-import { db, storage, collection, getDocs, addDoc, deleteDoc, updateDoc, doc, query, orderBy, serverTimestamp, ref, uploadBytes, getDownloadURL, setDoc, getDoc } from "./js/firebase.js";
+import { db, storage, collection, getDocs, addDoc, deleteDoc, updateDoc, doc, query, orderBy, serverTimestamp, ref, uploadBytes, getDownloadURL, setDoc, getDoc, where } from "./js/firebase.js";
 import { guard, esc, $, ago, icon, toast, applySettings } from "./js/common.js";
 
 const views = {};
@@ -170,27 +171,38 @@ views.mapel = async () => {
   }).join("") || kosong("Belum ada mata pelajaran. Tambahkan yang pertama.");
   document.querySelectorAll("#mDaftar [data-r]").forEach((b) => (b.onclick = async () => {
     const n = prompt("Nama baru mata pelajaran:", mapelNama(b.dataset.r));
-    if (n && n.trim()) { await updateDoc(doc(db, "mapel", b.dataset.r), { nama: n.trim() }); toast("Nama diubah"); views.mapel(); }
+    if (n && n.trim()) { await updateDoc(doc(db, "mapel", b.dataset.r), { nama: n.trim() }); await bump(); toast("Nama diubah"); views.mapel(); }
   }));
   document.querySelectorAll("#mDaftar [data-x]").forEach((b) => (b.onclick = async () => {
     if (!confirm("Hapus mata pelajaran ini? Materi, tugas, dan kuis di dalamnya tidak dihapus, tetapi dipindahkan ke 'Umum'.")) return;
-    await deleteDoc(doc(db, "mapel", b.dataset.x)); toast("Dihapus"); views.mapel();
+    await deleteDoc(doc(db, "mapel", b.dataset.x)); await bump(); toast("Dihapus"); views.mapel();
   }));
 };
 $("#mForm").onsubmit = async (e) => {
   e.preventDefault();
   const id = "m" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
-  try { await setDoc(doc(db, "mapel", id), { nama: $("#mNama").value.trim(), createdAt: serverTimestamp() }); e.target.reset(); toast("Mata pelajaran ditambahkan"); views.mapel(); }
+  try { await setDoc(doc(db, "mapel", id), { nama: $("#mNama").value.trim(), createdAt: serverTimestamp() }); await bump(); e.target.reset(); toast("Mata pelajaran ditambahkan"); views.mapel(); }
   catch (er) { alert("Gagal menyimpan: " + er.message + "\nPastikan firestore.rules terbaru sudah di-Publish."); }
 };
 $("#cFilter").onchange = () => views.konten();
 $("#rMapel").onchange = () => views.nilaiS();
 
+/* Hemat kuota */
+const bump = () => setDoc(doc(db, "meta", "versi"), { t: Date.now() }).catch(() => {});
+let rekapCache = null;
+const pending = async () => (await getDocs(query(collection(db, "submissions"), where("status", "==", "belum_diperiksa")))).docs.map((d) => ({ id: d.id, ...d.data() }));
+const jumlahSiswa = async () => {
+  try { const x = JSON.parse(localStorage.getItem("daspro_siswa") || "null"); if (x && Date.now() - x.at < 36e5) return x.n; } catch {}
+  const n = (await getDocs(query(collection(db, "users"), where("role", "==", "siswa")))).size;
+  try { localStorage.setItem("daspro_siswa", JSON.stringify({ n, at: Date.now() })); } catch {}
+  return n;
+};
+
 /* Ringkasan */
 views.ringkasan = async () => {
-  const [u, m, t, s] = await Promise.all(["users", "materi", "tugas", "submissions"].map(all));
-  const q = s.filter((x) => x.status === "belum_diperiksa");
-  const a = [["users", u.filter((x) => x.role === "siswa").length, "Siswa"], ["book", m.length, "Materi & modul"], ["task", t.length, "Tugas"], ["clock", q.length, "Belum diperiksa"]];
+  const [nSiswa, m, t, q] = await Promise.all([jumlahSiswa(), all("materi"), all("tugas"), pending()]);
+  
+  const a = [["users", nSiswa, "Siswa"], ["book", m.length, "Materi & modul"], ["task", t.length, "Tugas"], ["clock", q.length, "Belum diperiksa"]];
   $("#angka").innerHTML = a.map(([i, v, l]) => `<div class="card stat"><div class="ic">${icon(i)}</div><div><b>${v}</b><span class="mute sm">${l}</span></div></div>`).join("");
   $("#antre").innerHTML = q.slice(0, 5).map((x) => `<li><div class="row"><div class="av">${esc(x.siswaNama[0])}</div><div><b>${esc(x.siswaNama)}</b><div class="mute sm">${esc(x.tugasJudul)}</div></div></div><span class="tag warn">${ago(x.createdAt)}</span></li>`).join("") || kosong("Tidak ada antrean. Semua sudah diperiksa.");
 };
@@ -204,18 +216,18 @@ views.konten = async () => {
   $("#daftar").innerHTML = items.map((i) => `<li><div class="row"><div class="fi">${icon(i.col === "tugas" ? "task" : i.tipe === "modul" ? "book" : "file")}</div><div><b>${esc(i.judul)}</b><div class="mute sm">${i.col === "tugas" ? "Tugas" : esc(i.tipe)} · ${esc(mapelNama(i.mapelId))}</div></div></div>
     <button class="btn ghost sm" data-c="${i.col}" data-id="${i.id}" style="color:var(--bad)">${icon("trash")}</button></li>`).join("") || kosong("Belum ada konten. Tambahkan yang pertama.");
   document.querySelectorAll("#daftar button").forEach((b) => (b.onclick = async () => {
-    if (confirm("Hapus item ini?")) { await deleteDoc(doc(db, b.dataset.c, b.dataset.id)); toast("Dihapus"); views.konten(); }
+    if (confirm("Hapus item ini?")) { await deleteDoc(doc(db, b.dataset.c, b.dataset.id)); await bump(); toast("Dihapus"); views.konten(); }
   }));
 };
 $("#form").onsubmit = async (e) => {
-  e.preventDefault(); $("#simpan").disabled = true; $("#simpan").textContent = "Mengunggah...";
+  e.preventDefault(); $("#simpan").disabled = true; $("#simpan").textContent = "Menyimpan...";
   try {
-    let fileUrl = ""; const f = $("#file").files[0];
-    if (f) { const r = ref(storage, `files/${Date.now()}_${f.name}`); await uploadBytes(r, f); fileUrl = await getDownloadURL(r); }
-    const tipe = $("#tipe").value;
+    const fileUrl = $("#link").value.trim();
+    if (fileUrl && !/^https?:\/\//i.test(fileUrl)) throw new Error("Tautan harus diawali https://");
+        const tipe = $("#tipe").value;
     if (tipe === "tugas") await addDoc(collection(db, "tugas"), { mapelId: $("#tMapel").value, judul: $("#judul").value, instruksi: $("#desk").value, deadline: $("#dead").value, fileUrl, createdAt: serverTimestamp() });
     else await addDoc(collection(db, "materi"), { mapelId: $("#tMapel").value, judul: $("#judul").value, deskripsi: $("#desk").value, tipe, fileUrl, createdAt: serverTimestamp() });
-    e.target.reset(); $("#tipe").onchange(); toast("Tersimpan"); views.konten();
+    await bump(); e.target.reset(); $("#tipe").onchange(); toast("Tersimpan"); views.konten();
   } catch (er) { alert("Gagal menyimpan: " + er.message); }
   $("#simpan").disabled = false; $("#simpan").textContent = "Simpan";
 };
@@ -228,7 +240,7 @@ $("#cn").innerHTML = [60, 70, 80, 90, 100].map((n) => `<button type="button">${n
 document.querySelectorAll("#chips button").forEach((b) => (b.onclick = () => { const f = $("#fb"); f.value = (f.value ? f.value + " " : "") + b.textContent; }));
 document.querySelectorAll("#cn button").forEach((b) => (b.onclick = () => ($("#nilai").value = b.textContent)));
 views.periksa = async () => {
-  queue = (await all("submissions")).filter((x) => x.status === "belum_diperiksa").sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0));
+  queue = (await pending()).sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0));
   idx = 0; tampil();
 };
 function tampil() {
@@ -243,7 +255,7 @@ function tampil() {
 $("#nilaiForm").onsubmit = async (e) => {
   e.preventDefault(); const c = queue[idx];
   await updateDoc(doc(db, "submissions", c.id), { nilai: Number($("#nilai").value), feedback: $("#fb").value, status: "selesai" });
-  toast("Nilai tersimpan"); queue.splice(idx, 1); if (idx >= queue.length) idx = 0; tampil();
+  rekapCache = null; toast("Nilai tersimpan"); queue.splice(idx, 1); if (idx >= queue.length) idx = 0; tampil();
 };
 $("#lewat").onclick = () => { if (queue.length) { idx = (idx + 1) % queue.length; tampil(); } };
 
@@ -254,7 +266,8 @@ views.nilaiS = async () => {
   const src = {};
   [...(await all("tugas")), ...(await all("kuis"))].forEach((x) => (src[x.id] = x.mapelId || ""));
   const f = $("#rMapel").value;
-  done = (await all("submissions")).filter((x) => x.status === "selesai")
+  if (!rekapCache || Date.now() - rekapCache.t > 3e5) rekapCache = { t: Date.now(), rows: (await getDocs(query(collection(db, "submissions"), where("status", "==", "selesai")))).docs.map((d) => ({ id: d.id, ...d.data() })) };
+  done = rekapCache.rows
     .map((x) => { const id = mOf(x.mapelId || src[x.tugasId] || ""); return { ...x, _id: id, _m: mapelNama(id) }; })
     .filter((x) => f === "*" || x._id === f);
   $("#rekap").innerHTML = done.length ? `<table><tr><th>Siswa</th><th>Mapel</th><th>Tugas / kuis</th><th>Nilai</th><th>Umpan balik</th></tr>${done.map((x) => `<tr><td><b>${esc(x.siswaNama)}</b></td><td>${esc(x._m)}</td><td>${esc(x.tugasJudul)}</td><td><span class="tag ok">${esc(x.nilai)}</span></td><td class="mute">${esc(x.feedback || "-")}</td></tr>`).join("")}</table>` : kosong("Belum ada nilai.");
@@ -295,7 +308,7 @@ views.kuis = async () => {
     <button class="btn ghost sm" data-id="${k.id}" style="color:var(--bad)">${icon("trash")}</button></li>`).join("") || kosong("Belum ada kuis.");
   document.querySelectorAll("#kDaftar button").forEach((b) => (b.onclick = async () => {
     if (!confirm("Hapus kuis ini beserta kunci jawabannya? Nilai siswa yang sudah masuk tetap tersimpan.")) return;
-    await deleteDoc(doc(db, "kuis", b.dataset.id)); await deleteDoc(doc(db, "kunci", b.dataset.id)); toast("Kuis dihapus"); views.kuis();
+    await deleteDoc(doc(db, "kuis", b.dataset.id)); await deleteDoc(doc(db, "kunci", b.dataset.id)); await bump(); toast("Kuis dihapus"); views.kuis();
   }));
 };
 $("#kForm").onsubmit = async (e) => {
@@ -315,7 +328,7 @@ $("#kForm").onsubmit = async (e) => {
   try {
     await setDoc(doc(db, "kunci", id), { kunci });
     await setDoc(doc(db, "kuis", id), { mapelId: $("#kMapel").value, judul: $("#kJudul").value.trim(), deskripsi: $("#kDesk").value.trim(), soal, createdAt: serverTimestamp() });
-    e.target.reset(); soalList = [baru()]; renderSoal(); toast("Kuis tersimpan"); views.kuis();
+    await bump(); e.target.reset(); soalList = [baru()]; renderSoal(); toast("Kuis tersimpan"); views.kuis();
   } catch (er) { alert("Gagal menyimpan: " + er.message + "\nPastikan firestore.rules terbaru sudah di-Publish."); }
   $("#kSimpan").disabled = false;
 };
