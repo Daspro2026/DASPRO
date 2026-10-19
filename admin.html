@@ -87,14 +87,15 @@ dialog{border:0;border-radius:22px;max-width:580px;width:calc(100% - 32px);paddi
 
 <section id="konten" class="hide"><div class="ph"><div><h1>Materi &amp; tugas</h1><p>Tambahkan modul, materi, dan tugas. Tempel tautan dari mana saja (Google Drive, YouTube, Canva, Notion, website lain).</p></div></div>
   <div class="grid gk">
-    <form class="card" id="form"><h2>Tambah konten baru</h2><label>Mata pelajaran</label><select id="tMapel"></select>
+    <form class="card" id="form"><h2 id="cHead">Tambah konten baru</h2><div id="cInfo" class="mute sm hide" style="margin-bottom:6px"></div><label>Mata pelajaran</label><select id="tMapel"></select>
       <label>Jenis</label><select id="tipe"><option value="materi">Materi</option><option value="modul">Modul</option><option value="tugas">Tugas</option></select>
       <label>Judul</label><input id="judul" required placeholder="Contoh: Modul 3 Perulangan">
       <label id="lDesk">Deskripsi</label><textarea id="desk"></textarea>
       <div id="wDead" class="hide"><label>Tenggat</label><input id="dead" type="date"></div>
       <label>Tautan (boleh lebih dari satu)</label><textarea id="link" style="min-height:84px" placeholder="https://drive.google.com/...&#10;https://youtube.com/...&#10;https://canva.com/..."></textarea>
       <p class="mute sm" style="margin-top:6px">Tempel tautan dari mana saja: Google Drive, YouTube, Canva, Notion, OneDrive, GitHub, atau website lain. Satu tautan per baris. Pastikan akses file diatur &quot;siapa saja yang memiliki link&quot;.</p>
-      <button class="btn full" id="simpan">Simpan</button></form>
+      <button class="btn full" id="simpan">Simpan</button>
+      <button type="button" class="btn ghost full hide" id="cBatal" style="margin-top:8px">Batal edit</button></form>
     <div class="card"><div class="row" style="justify-content:space-between"><h2>Sudah diunggah</h2><select id="cFilter" style="width:auto;max-width:200px"></select></div><ul class="list" id="daftar" style="margin-top:8px"></ul></div>
   </div></section>
 
@@ -249,14 +250,37 @@ views.ringkasan = async () => {
 
 /* Konten */
 $("#tipe").onchange = () => { const t = $("#tipe").value === "tugas"; $("#wDead").classList.toggle("hide", !t); $("#lDesk").textContent = t ? "Instruksi" : "Deskripsi"; };
+let kEdit = null;
+const setTipeOpsi = (col) => [...$("#tipe").options].forEach((o) => (o.disabled = col ? (col === "tugas" ? o.value !== "tugas" : o.value === "tugas") : false));
+function keluarKonten() {
+  kEdit = null; $("#form").reset(); setTipeOpsi(null); $("#tipe").onchange();
+  $("#cHead").textContent = "Tambah konten baru"; $("#simpan").textContent = "Simpan";
+  $("#cBatal").classList.add("hide"); $("#cInfo").classList.add("hide");
+}
+function mulaiEditKonten(i) {
+  if (!i) return;
+  kEdit = { col: i.col, id: i.id };
+  setTipeOpsi(i.col);
+  $("#tMapel").value = mOf(i.mapelId || ""); $("#tipe").value = i.col === "tugas" ? "tugas" : i.tipe || "materi"; $("#tipe").onchange();
+  $("#judul").value = i.judul || ""; $("#desk").value = (i.col === "tugas" ? i.instruksi : i.deskripsi) || ""; $("#dead").value = i.deadline || "";
+  $("#link").value = (Array.isArray(i.links) && i.links.length ? i.links : i.fileUrl ? [i.fileUrl] : []).join("\n");
+  $("#cHead").textContent = i.col === "tugas" ? "Edit tugas" : "Edit materi"; $("#simpan").textContent = "Simpan perubahan";
+  $("#cBatal").classList.remove("hide");
+  $("#cInfo").textContent = i.col === "tugas" ? "Jenis tugas tidak bisa diubah. Jawaban siswa yang sudah masuk tetap tersimpan." : "Anda bisa mengubah jenis antara Materi dan Modul.";
+  $("#cInfo").classList.remove("hide");
+  $("#form").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+$("#cBatal").onclick = keluarKonten;
 views.konten = async () => {
   await loadMapel();
   const get = async (c) => (await getDocs(query(collection(db, c), orderBy("createdAt", "desc")))).docs.map((d) => ({ id: d.id, col: c, ...d.data() }));
   const items = [...(await get("materi")), ...(await get("tugas"))].filter((i) => $("#cFilter").value === "*" || mOf(i.mapelId) === $("#cFilter").value);
   $("#daftar").innerHTML = items.map((i) => `<li><div class="row"><div class="fi">${icon(i.col === "tugas" ? "task" : i.tipe === "modul" ? "book" : "file")}</div><div><b>${esc(i.judul)}</b><div class="mute sm">${i.col === "tugas" ? "Tugas" : esc(i.tipe)} · ${esc(mapelNama(i.mapelId))}</div></div></div>
-    <button class="btn ghost sm" data-c="${i.col}" data-id="${i.id}" style="color:var(--bad)">${icon("trash")}</button></li>`).join("") || kosong("Belum ada konten. Tambahkan yang pertama.");
-  document.querySelectorAll("#daftar button").forEach((b) => (b.onclick = async () => {
-    if (confirm("Hapus item ini?")) { await deleteDoc(doc(db, b.dataset.c, b.dataset.id)); await bump(); toast("Dihapus"); views.konten(); }
+    <div class="row" style="gap:6px"><button class="btn ghost sm" data-edit="${i.col}_${i.id}" title="Edit">${icon("edit")} Edit</button>
+    <button class="btn ghost sm" data-c="${i.col}" data-id="${i.id}" style="color:var(--bad)">${icon("trash")}</button></div></li>`).join("") || kosong("Belum ada konten. Tambahkan yang pertama.");
+  document.querySelectorAll("#daftar [data-edit]").forEach((b) => (b.onclick = () => mulaiEditKonten(items.find((i) => i.col + "_" + i.id === b.dataset.edit))));
+  document.querySelectorAll("#daftar [data-c]").forEach((b) => (b.onclick = async () => {
+    if (confirm("Hapus item ini?")) { await deleteDoc(doc(db, b.dataset.c, b.dataset.id)); if (kEdit?.id === b.dataset.id) keluarKonten(); await bump(); toast("Dihapus"); views.konten(); }
   }));
 };
 $("#form").onsubmit = async (e) => {
@@ -266,11 +290,14 @@ $("#form").onsubmit = async (e) => {
     if (links.some((u) => !/^https?:\/\//i.test(u))) throw new Error("Setiap tautan harus diawali http:// atau https://");
     const fileUrl = links[0] || "";
         const tipe = $("#tipe").value;
-    if (tipe === "tugas") await addDoc(collection(db, "tugas"), { mapelId: $("#tMapel").value, judul: $("#judul").value, instruksi: $("#desk").value, deadline: $("#dead").value, fileUrl, links, createdAt: serverTimestamp() });
-    else await addDoc(collection(db, "materi"), { mapelId: $("#tMapel").value, judul: $("#judul").value, deskripsi: $("#desk").value, tipe, fileUrl, links, createdAt: serverTimestamp() });
-    await bump(); e.target.reset(); $("#tipe").onchange(); toast("Tersimpan"); views.konten();
+    const dt = tipe === "tugas" ? { mapelId: $("#tMapel").value, judul: $("#judul").value.trim(), instruksi: $("#desk").value, deadline: $("#dead").value, fileUrl, links }
+      : { mapelId: $("#tMapel").value, judul: $("#judul").value.trim(), deskripsi: $("#desk").value, tipe, fileUrl, links };
+    const diEdit = !!kEdit;
+    if (diEdit) await updateDoc(doc(db, kEdit.col, kEdit.id), { ...dt, updatedAt: serverTimestamp() });
+    else await addDoc(collection(db, tipe === "tugas" ? "tugas" : "materi"), { ...dt, createdAt: serverTimestamp() });
+    await bump(); keluarKonten(); toast(diEdit ? "Perubahan tersimpan" : "Tersimpan"); views.konten();
   } catch (er) { alert("Gagal menyimpan: " + er.message); }
-  $("#simpan").disabled = false; $("#simpan").textContent = "Simpan";
+  $("#simpan").disabled = false; $("#simpan").textContent = kEdit ? "Simpan perubahan" : "Simpan";
 };
 
 /* Periksa */
