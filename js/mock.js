@@ -16,7 +16,7 @@ const seed = () => ({
   },
   submissions: {
     t1_u2: { tugasId: "t1", tugasJudul: "Latihan Flowchart", siswaId: "u2", siswaNama: "Aisyah Putri", jawaban: "Mulai, input panjang dan lebar, hitung luas = p x l, keliling = 2(p+l), tampilkan hasil, selesai.", link: "", status: "selesai", nilai: 88, feedback: "Bagus sekali. Tambahkan validasi input.", createdAt: t(4) },
-    t1_u3: { tugasId: "t1", tugasJudul: "Latihan Flowchart", siswaId: "u3", siswaNama: "Budi Santoso", jawaban: "Input p, l. Luas = p*l. Keliling = 2*(p+l). Output.", link: "https://drive.google.com", files: [{ nama: "Flowchart-Budi.pdf", url: "#", ukuran: 245000 }, { nama: "Catatan.docx", url: "#", ukuran: 58000 }], status: "belum_diperiksa", nilai: null, feedback: "", createdAt: t(2) },
+    t1_u3: { tugasId: "t1", tugasJudul: "Latihan Flowchart", siswaId: "u3", siswaNama: "Budi Santoso", jawaban: "Input p, l. Luas = p*l. Keliling = 2*(p+l). Output.", link: "https://drive.google.com", files: [{ id: "demo1", nama: "Flowchart-Budi.pdf", tipe: "application/pdf", ukuran: 245000 }, { id: "demo2", nama: "Catatan.docx", tipe: "", ukuran: 58000 }], status: "belum_diperiksa", nilai: null, feedback: "", createdAt: t(2) },
     t2_u4: { tugasId: "t2", tugasJudul: "Pseudocode Percabangan", siswaId: "u4", siswaNama: "Citra Lestari", jawaban: "JIKA n MOD 2 = 0 MAKA tampilkan 'Genap' SELAIN ITU tampilkan 'Ganjil'.", link: "", status: "belum_diperiksa", nilai: null, feedback: "", createdAt: t(0) }
   }
 });
