@@ -12,6 +12,15 @@ const fill = () => document.querySelectorAll("[data-ic]:empty").forEach((e) => (
 new MutationObserver(fill).observe(document.documentElement, { childList: true, subtree: true });
 fill();
 
+// ---- Unggah file jawaban
+export const UPLOAD = { maxMB: 10, maxFiles: 5, accept: ".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.csv,.txt,.zip,.png,.jpg,.jpeg,.webp" };
+const MIME = { pdf: "application/pdf", doc: "application/msword", docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", ppt: "application/vnd.ms-powerpoint", pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation", xls: "application/vnd.ms-excel", xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", csv: "text/csv", txt: "text/plain", zip: "application/zip", png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", webp: "image/webp" };
+export const extOf = (n = "") => (n.split(".").pop() || "").toLowerCase();
+export const fileOk = (f) => !!MIME[extOf(f.name)];
+export const mimeOf = (f) => MIME[extOf(f.name)] || f.type || "application/octet-stream";
+export const fmtSize = (b = 0) => (b >= 1048576 ? (b / 1048576).toFixed(1) + " MB" : Math.max(1, Math.round(b / 1024)) + " KB");
+export const fileChips = (arr) => (Array.isArray(arr) && arr.length ? `<div class="files">${arr.map((f) => `<a class="fchip" href="${safeUrl(f.url)}" target="_blank" rel="noopener">${icon("file")}<span class="fn">${esc(f.nama)}</span><small>${fmtSize(f.ukuran)}</small>${icon("download")}</a>`).join("")}</div>` : "");
+
 export function toast(m) {
   const t = Object.assign(document.createElement("div"), { className: "toast", textContent: m });
   document.body.append(t); setTimeout(() => t.remove(), 2400);
