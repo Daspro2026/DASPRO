@@ -1,0 +1,121 @@
+/* ===== DASPRO theme: profesional + animasi ringan =====
+   Dimuat SETELAH style bawaan tiap halaman, jadi menimpa tampilan lama.
+   Warna utama tetap mengikuti Pengaturan guru (--brand / --b2). */
+
+/* ---------- GLOBAL (semua halaman) ---------- */
+:root{--bg:#F3F5FB;--ink:#0F172A;--mute:#64748B;--line:#E4E8F2;--brand:#4F46E5;--b2:#7C7FF7;--soft:#EEF0FF;
+  --nav1:#0B1226;--nav2:#131C3B;--ease:cubic-bezier(.22,1,.36,1);
+  --sh1:0 1px 2px rgba(15,23,42,.05),0 10px 28px -14px rgba(15,23,42,.14);--sh2:0 2px 4px rgba(15,23,42,.06),0 18px 40px -16px rgba(15,23,42,.22)}
+html{scroll-behavior:smooth}
+button,.btn,a.btn{-webkit-tap-highlight-color:transparent}
+:is(button,.btn):active:not(:disabled){transform:scale(.95)!important;transition-duration:.08s}
+:focus-visible{outline:2px solid var(--b2);outline-offset:2px}
+@keyframes rise{from{opacity:0;transform:translateY(12px)}}
+@keyframes tabIn{from{opacity:0;transform:translateY(16px) scale(.995)}}
+@keyframes pop{from{opacity:0;transform:translateY(20px) scale(.95)}}
+@keyframes fade{from{opacity:0}}
+@keyframes toast{0%{opacity:0;transform:translate(-50%,18px) scale(.95)}10%,86%{opacity:1;transform:translate(-50%,0) scale(1)}100%{opacity:0;transform:translate(-50%,10px)}}
+@keyframes sheen{to{background-position:200% 0}}
+dialog{border-radius:24px;max-height:90vh;overflow:auto;box-shadow:0 40px 90px -20px rgba(15,23,42,.45)}
+dialog[open]{animation:pop .32s var(--ease)}
+dialog[open]::backdrop{animation:fade .25s;backdrop-filter:blur(5px);background:rgba(11,18,38,.55)}
+.toast{background:linear-gradient(135deg,#0F172A,#1E293B);border:1px solid rgba(255,255,255,.1);box-shadow:var(--sh2);animation:toast 2.4s var(--ease) forwards}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-delay:0s!important;transition-duration:.01ms!important}}
+
+/* ---------- APLIKASI (dashboard siswa & admin) ---------- */
+.app{background:radial-gradient(900px 380px at 88% -8%,color-mix(in srgb,var(--b2) 16%,transparent),transparent 70%)}
+body{background:var(--bg);color:var(--ink)}
+
+/* sidebar gelap */
+.app .side{background:linear-gradient(185deg,var(--nav1),var(--nav2));border-right:0;box-shadow:6px 0 30px -12px rgba(11,18,38,.45)}
+.side .logo{color:#fff}
+.side .logo i{box-shadow:0 8px 18px -6px var(--brand)}
+.side nav button{color:#9CA7C4;transition:background .2s,color .2s,transform .2s var(--ease),box-shadow .2s;position:relative}
+.side nav button svg{transition:transform .25s var(--ease)}
+.side nav button:hover{background:rgba(255,255,255,.07);color:#fff;transform:translateX(4px)}
+.side nav button:hover svg{transform:scale(1.15) rotate(-4deg)}
+.side nav button.on{background:linear-gradient(120deg,var(--brand),var(--b2));color:#fff;box-shadow:0 10px 22px -10px var(--brand)}
+.side nav button.on::before{content:"";position:absolute;left:-16px;top:22%;bottom:22%;width:4px;border-radius:0 4px 4px 0;background:#fff;animation:fade .3s}
+.app .me{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.09)}
+.me b{color:#fff}.me small{color:#8D99BA}
+.me button{color:#9CA7C4}.me button:hover{background:rgba(255,255,255,.12)!important;color:#fff!important}
+.av{background:linear-gradient(135deg,var(--brand),var(--b2));color:#fff;box-shadow:0 6px 14px -6px var(--brand)}
+.mtop .logo{color:var(--ink)}
+
+/* perpindahan tab */
+.main>section:not(.hide){animation:tabIn .42s var(--ease) backwards}
+.main>section:not(.hide) .grid>*,.main>section:not(.hide) .list li,.main>section:not(.hide) .sec{animation:rise .5s var(--ease) backwards}
+.main>section:not(.hide) .grid>:nth-child(2),.main>section:not(.hide) .list li:nth-child(2){animation-delay:.05s}
+.main>section:not(.hide) .grid>:nth-child(3),.main>section:not(.hide) .list li:nth-child(3){animation-delay:.1s}
+.main>section:not(.hide) .grid>:nth-child(4),.main>section:not(.hide) .list li:nth-child(4){animation-delay:.15s}
+.main>section:not(.hide) .grid>:nth-child(5),.main>section:not(.hide) .list li:nth-child(5){animation-delay:.2s}
+.main>section:not(.hide) .grid>:nth-child(n+6),.main>section:not(.hide) .list li:nth-child(n+6){animation-delay:.25s}
+
+/* judul & kartu */
+h1{letter-spacing:-.03em}
+.ph h1{background:linear-gradient(120deg,var(--ink),color-mix(in srgb,var(--brand) 70%,var(--ink)));-webkit-background-clip:text;background-clip:text;color:transparent}
+.card{border:1px solid var(--line);border-radius:20px;box-shadow:var(--sh1);transition:transform .25s var(--ease),box-shadow .25s,border-color .25s}
+.card.mat{cursor:default}
+.card.mat:hover,.card[data-m]:hover{transform:translateY(-4px);box-shadow:var(--sh2);border-color:color-mix(in srgb,var(--b2) 55%,var(--line))}
+.card[data-m]:active{transform:scale(.985)!important}
+.banner{position:relative;overflow:hidden;border-radius:24px;padding:38px 36px;background:linear-gradient(125deg,color-mix(in srgb,var(--brand) 78%,#000) 0%,var(--brand) 48%,var(--b2) 100%);box-shadow:0 24px 50px -24px var(--brand)}
+.banner::before,.banner::after{content:"";position:absolute;border-radius:50%;background:rgba(255,255,255,.1)}
+.banner::before{width:260px;height:260px;right:-60px;top:-110px}.banner::after{width:160px;height:160px;right:140px;bottom:-90px;background:rgba(255,255,255,.07)}
+.banner>*{position:relative}
+.stat .ic{background:linear-gradient(135deg,var(--brand),var(--b2));color:#fff;box-shadow:0 10px 20px -10px var(--brand);transition:transform .3s var(--ease)}
+.stat:hover .ic{transform:rotate(-8deg) scale(1.08)}
+.stat b{font-size:1.8rem;letter-spacing:-.03em}
+.fi{background:linear-gradient(135deg,var(--soft),color-mix(in srgb,var(--soft) 60%,#fff));transition:transform .25s var(--ease)}
+.list li{transition:background .2s;padding-left:10px;padding-right:10px;margin:0 -10px}
+.list li:hover{background:color-mix(in srgb,var(--soft) 55%,transparent)}
+.list li:hover .fi{transform:scale(1.08) rotate(-3deg)}
+.list a.row{transition:transform .2s var(--ease)}.list a.row:active{transform:scale(.98)}
+
+/* tombol */
+.btn{background:linear-gradient(135deg,var(--brand),var(--b2));box-shadow:0 8px 18px -8px var(--brand);transition:transform .2s var(--ease),box-shadow .2s,filter .2s,background .2s}
+.btn:hover{filter:brightness(1.07);transform:translateY(-2px);box-shadow:0 14px 24px -10px var(--brand)}
+.btn.ghost{background:#fff;color:var(--ink);box-shadow:none;border:1px solid var(--line)}
+.btn.ghost:hover{background:var(--soft);color:var(--brand);border-color:var(--b2);filter:none;box-shadow:0 8px 18px -12px var(--brand)}
+.btn:disabled{opacity:.55;transform:none;box-shadow:none;cursor:progress}
+.btn svg{transition:transform .25s var(--ease)}.btn:hover svg{transform:translateY(1px) scale(1.1)}
+
+/* form */
+label{letter-spacing:.01em}
+input,select,textarea{border:1.5px solid var(--line);border-radius:13px;background:#FBFCFF}
+input:hover,select:hover,textarea:hover{border-color:color-mix(in srgb,var(--b2) 40%,var(--line))}
+input:focus,select:focus,textarea:focus{background:#fff;border-color:var(--b2)}
+
+/* chip, tag, tabel */
+.chips button{transition:transform .15s var(--ease),background .2s,color .2s,border-color .2s}
+.chips button:hover{transform:translateY(-1px)}
+#dTabs button{border-radius:99px;padding:9px 18px;font-weight:700}
+#dTabs button.on{background:linear-gradient(120deg,var(--brand),var(--b2));color:#fff;border-color:transparent;box-shadow:0 8px 16px -8px var(--brand)}
+.tag{font-weight:700;letter-spacing:.01em}
+.tag.ok::before,.tag.warn::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:currentColor;margin-right:6px;vertical-align:1px}
+th{text-transform:uppercase;letter-spacing:.06em;font-size:.7rem;background:#F8F9FD}
+tr{transition:background .15s}tbody tr:hover td,table tr:hover td{background:#F8F9FE}
+.ans{border:1px solid var(--line);background:linear-gradient(180deg,#FAFBFF,var(--bg))}
+.score{background:linear-gradient(120deg,var(--brand),var(--b2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.opt{transition:transform .15s var(--ease),border-color .2s,background .2s}.opt:hover{transform:translateX(3px);border-color:var(--b2)}
+.empty{border:2px dashed var(--line);border-radius:16px;margin:6px 0}
+
+/* unggah file */
+.drop{display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;margin:0;padding:24px 16px;border:2px dashed color-mix(in srgb,var(--b2) 50%,var(--line));border-radius:18px;background:color-mix(in srgb,var(--soft) 55%,#fff);cursor:pointer;color:var(--brand);font-size:.95rem;font-weight:700;letter-spacing:0;transition:transform .25s var(--ease),border-color .2s,background .2s}
+.drop:hover,.drop.over{border-color:var(--brand);background:var(--soft);transform:translateY(-2px)}
+.drop:active{transform:scale(.98)}
+.drop svg{width:30px;height:30px;transition:transform .3s var(--ease)}.drop:hover svg,.drop.over svg{transform:translateY(-4px)}
+.drop small{color:var(--mute);font-weight:500;font-size:.78rem}.drop input{display:none}
+.files{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.fchip{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:13px;background:#fff;font-size:.88rem;font-weight:600;color:var(--ink);min-width:0;animation:rise .3s var(--ease) backwards;transition:transform .2s var(--ease),border-color .2s,background .2s}
+.fchip svg{color:var(--brand)}.fchip .fn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.fchip small{color:var(--mute);font-weight:500;white-space:nowrap}
+a.fchip:hover{border-color:var(--b2);background:var(--soft);transform:translateY(-2px)}a.fchip:active{transform:scale(.98)}
+.fchip button{border:0;background:none;color:var(--mute);cursor:pointer;font-size:1.2rem;line-height:1;padding:2px 8px;border-radius:8px}.fchip button:hover{background:#FDECEC;color:var(--bad)}
+.tag.file{display:inline-flex;align-items:center;gap:5px;margin:2px 4px 2px 0;max-width:180px;overflow:hidden;text-overflow:ellipsis;transition:transform .15s}.tag.file:hover{transform:translateY(-1px)}.tag.file svg{width:13px;height:13px}.tag.file::before{display:none}
+
+/* HP: navigasi bawah gelap */
+@media(max-width:860px){
+  .app .side{background:linear-gradient(180deg,var(--nav2),var(--nav1));border-top:0;border-radius:20px 20px 0 0;box-shadow:0 -10px 30px -10px rgba(11,18,38,.45);padding:8px}
+  .side nav button:hover{transform:none}.side nav button.on::before{display:none}
+  .side nav button.on{border-radius:14px}
+  .banner{padding:26px 22px}
+}
