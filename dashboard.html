@@ -76,12 +76,22 @@ dialog{border:0;border-radius:22px;max-width:580px;width:calc(100% - 32px);paddi
 </main></div>
 <dialog id="dlg"><div id="isi"></div><button class="btn ghost full" id="tutup">Tutup</button></dialog>
 <script type="module">
-import { auth, db, collection, getDocs, query, where, orderBy, doc, setDoc, serverTimestamp } from "./js/firebase.js";
+import { auth, db, collection, getDocs, getDoc, query, where, orderBy, doc, setDoc, serverTimestamp } from "./js/firebase.js";
 import { guard, esc, $, safeUrl, fdate, icon, toast } from "./js/common.js";
 
 const views = {};
 const { user, profile, show } = await guard(false, [["beranda", "Beranda", "home"], ["mapel", "Mata pelajaran", "book"], ["nilai", "Nilai", "star"]], views);
-const load = async (c) => (await getDocs(query(collection(db, c), orderBy("createdAt", "desc")))).docs.map((d) => ({ id: d.id, ...d.data() }));
+const fetchAll = async (c) => (await getDocs(query(collection(db, c), orderBy("createdAt", "desc")))).docs.map((d) => ({ id: d.id, ...d.data() }));
+// Hemat kuota: daftar materi/tugas/kuis/mapel disimpan di browser dan hanya diunduh ulang jika guru mengubah isi (meta/versi).
+let ver = null;
+try { ver = (await getDoc(doc(db, "meta", "versi"))).data()?.t || 0; } catch {}
+const load = async (c) => {
+  const k = "daspro_c_" + c;
+  try { const x = JSON.parse(localStorage.getItem(k) || "null"); if (ver !== null && x && x.v === ver && Date.now() - x.at < 864e5) return x.d; } catch {}
+  const data = await fetchAll(c);
+  if (ver !== null) { try { localStorage.setItem(k, JSON.stringify({ v: ver, at: Date.now(), d: data })); } catch {} }
+  return data;
+};
 const [materi, tugas, kuis] = [await load("materi"), await load("tugas"), await load("kuis")];
 const mapelList = (await load("mapel")).reverse();
 const subs = {};
@@ -90,7 +100,7 @@ const subs = {};
 const status = (id) => { const s = subs[id]; return !s ? '<span class="tag warn">Belum dikumpulkan</span>' : s.status === "selesai" ? `<span class="tag ok">Nilai ${esc(s.nilai)}</span>` : '<span class="tag">Menunggu nilai</span>'; };
 const mCard = (m) => `<div class="card mat"><div class="row"><div class="fi">${icon(m.tipe === "modul" ? "book" : "file")}</div><span class="tag">${esc(m.tipe)}</span></div>
   <div><h2>${esc(m.judul)}</h2></div><p class="mute sm">${esc(m.deskripsi || "")}</p>
-  <a class="btn ghost sm" href="${safeUrl(m.fileUrl)}" target="_blank" rel="noopener">${icon("download")} Buka file</a></div>`;
+  ${m.fileUrl ? `<a class="btn ghost sm" href="${safeUrl(m.fileUrl)}" target="_blank" rel="noopener">${icon("download")} Buka file</a>` : ""}</div>`;
 const tItem = (t) => `<li><a href="#" data-id="${t.id}" class="row"><div class="fi">${icon("task")}</div><div><b>${esc(t.judul)}</b><div class="mute sm">${t.deadline ? "Tenggat " + fdate(t.deadline) : "Tanpa tenggat"}</div></div></a>${status(t.id)}</li>`;
 const bind = (root) => document.querySelectorAll(root + " a[data-id]").forEach((a) => (a.onclick = (e) => { e.preventDefault(); buka(a.dataset.id); }));
 const kosong = (t) => `<div class="empty">${t}</div>`;
