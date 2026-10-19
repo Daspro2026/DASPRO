@@ -63,8 +63,8 @@ dialog{border:0;border-radius:22px;max-width:580px;width:calc(100% - 32px);paddi
 }
 </style><title>Beranda | DASPRO</title></head><body class="hide">
 <div class="app"><main class="main">
-  <section id="beranda"><div class="banner"><h1 id="sapa"></h1><p>Berikut ringkasan belajar Anda hari ini.</p></div>
-    <div class="grid g3" id="stat"></div>
+  <section id="beranda"><div class="banner"><h1 id="sapa"></h1><p id="sub">Berikut ringkasan belajar Anda hari ini.</p></div>
+    <div id="hint"></div><div class="grid g3" id="stat"></div>
     <div class="sec"><h2>Perlu dikerjakan</h2></div><div class="card"><ul class="list" id="tugasMini"></ul></div>
     <div class="sec"><h2>Mata pelajaran</h2></div><div class="grid gm" id="materiMini"></div></section>
   <section id="mapel" class="hide"><div class="ph"><div><h1>Mata pelajaran</h1><p>Pilih mata pelajaran untuk melihat materi, tugas, dan kuisnya.</p></div></div><div class="grid gm" id="mapelAll"></div></section>
@@ -72,15 +72,27 @@ dialog{border:0;border-radius:22px;max-width:580px;width:calc(100% - 32px);paddi
     <div class="ph"><div><h1 id="dNama"></h1><p>Materi, tugas, dan kuis mata pelajaran ini.</p></div></div>
     <style>#dTabs button{padding:8px 16px;font-size:.85rem}#dTabs button.on{background:var(--soft);color:var(--brand);border-color:var(--b2)}.opt{display:flex;align-items:center;gap:10px;padding:11px 14px;border:1px solid var(--line);border-radius:12px;cursor:pointer;margin:8px 0 0;font-size:.92rem;font-weight:500;color:var(--ink)}.opt input{width:auto;padding:0;accent-color:var(--brand);flex:none}.opt:has(input:checked){border-color:var(--brand);background:var(--soft)}</style>
     <div class="chips" id="dTabs" style="margin:0 0 20px"></div><div id="dIsi"></div></section>
+  <section id="profil" class="hide"><div class="ph"><div><h1>Profil saya</h1><p>Lengkapi data diri dan pilih kelas Anda.</p></div></div>
+    <div class="grid gk">
+      <div class="card" style="text-align:center"><div class="av" id="pAv" style="width:112px;height:112px;font-size:2.4rem;margin:0 auto 14px;overflow:hidden"></div>
+        <h2 id="pNm"></h2><p class="mute" id="pKl" style="margin-top:2px"></p><p class="mute sm pre" id="pDs" style="margin-top:12px"></p>
+        <label style="margin-top:20px">Foto profil</label><input type="file" id="pFoto" accept="image/*" class="sm"><button type="button" class="btn ghost sm" id="pHapus" style="margin-top:10px">Hapus foto</button></div>
+      <form class="card" id="pForm"><h2>Data diri</h2>
+        <label>Nama lengkap</label><input id="pNama" required>
+        <label>Kelas</label><select id="pKelas"></select>
+        <label>NIS / nomor absen (opsional)</label><input id="pNis" placeholder="Contoh: 12345">
+        <label>Deskripsi singkat</label><textarea id="pDesk" style="min-height:90px" placeholder="Ceritakan sedikit tentang Anda, hobi, atau cita-cita"></textarea>
+        <button class="btn full">Simpan profil</button></form>
+    </div></section>
   <section id="nilai" class="hide"><div class="ph"><div><h1>Nilai</h1><p>Hasil penilaian dan umpan balik guru.</p></div></div><div class="card" style="overflow-x:auto" id="nilaiTbl"></div></section>
 </main></div>
 <dialog id="dlg"><div id="isi"></div><button class="btn ghost full" id="tutup">Tutup</button></dialog>
 <script type="module">
-import { auth, db, collection, getDocs, getDoc, query, where, orderBy, doc, setDoc, serverTimestamp } from "./js/firebase.js";
+import { auth, db, collection, getDocs, getDoc, query, where, orderBy, doc, setDoc, updateDoc, serverTimestamp } from "./js/firebase.js";
 import { guard, esc, $, safeUrl, fdate, icon, toast } from "./js/common.js";
 
 const views = {};
-const { user, profile, show } = await guard(false, [["beranda", "Beranda", "home"], ["mapel", "Mata pelajaran", "book"], ["nilai", "Nilai", "star"]], views);
+const { user, profile, show } = await guard(false, [["beranda", "Beranda", "home"], ["mapel", "Mata pelajaran", "book"], ["nilai", "Nilai", "star"], ["profil", "Profil", "users"]], views);
 const fetchAll = async (c) => (await getDocs(query(collection(db, c), orderBy("createdAt", "desc")))).docs.map((d) => ({ id: d.id, ...d.data() }));
 // Hemat kuota: daftar materi/tugas/kuis/mapel disimpan di browser dan hanya diunduh ulang jika guru mengubah isi (meta/versi).
 let ver = null;
@@ -100,11 +112,28 @@ const subs = {};
 const status = (id) => { const s = subs[id]; return !s ? '<span class="tag warn">Belum dikumpulkan</span>' : s.status === "selesai" ? `<span class="tag ok">Nilai ${esc(s.nilai)}</span>` : '<span class="tag">Menunggu nilai</span>'; };
 const mCard = (m) => `<div class="card mat"><div class="row"><div class="fi">${icon(m.tipe === "modul" ? "book" : "file")}</div><span class="tag">${esc(m.tipe)}</span></div>
   <div><h2>${esc(m.judul)}</h2></div><p class="mute sm">${esc(m.deskripsi || "")}</p>
-  ${m.fileUrl ? `<a class="btn ghost sm" href="${safeUrl(m.fileUrl)}" target="_blank" rel="noopener">${icon("download")} Buka file</a>` : ""}</div>`;
+  <div style="display:flex;gap:8px;flex-wrap:wrap">${linkBtns(m)}</div></div>`;
 const tItem = (t) => `<li><a href="#" data-id="${t.id}" class="row"><div class="fi">${icon("task")}</div><div><b>${esc(t.judul)}</b><div class="mute sm">${t.deadline ? "Tenggat " + fdate(t.deadline) : "Tanpa tenggat"}</div></div></a>${status(t.id)}</li>`;
 const bind = (root) => document.querySelectorAll(root + " a[data-id]").forEach((a) => (a.onclick = (e) => { e.preventDefault(); buka(a.dataset.id); }));
 const kosong = (t) => `<div class="empty">${t}</div>`;
 
+const kelasList = (await load("kelas")).reverse();
+const kelasNama = (id) => kelasList.find((k) => k.id === id)?.nama || "";
+const linksOf = (x) => (Array.isArray(x.links) && x.links.length ? x.links : x.fileUrl ? [x.fileUrl] : []);
+const linkLabel = (u) => {
+  try {
+    const h = new URL(u).hostname.replace(/^www\./, "");
+    if (/drive\.google|docs\.google/.test(h)) return "Google Drive";
+    if (/youtu/.test(h)) return "YouTube";
+    if (/canva/.test(h)) return "Canva";
+    if (/notion/.test(h)) return "Notion";
+    if (/github/.test(h)) return "GitHub";
+    if (/onedrive|sharepoint|1drv/.test(h)) return "OneDrive";
+    if (/dropbox/.test(h)) return "Dropbox";
+    return h;
+  } catch { return "Tautan"; }
+};
+const linkBtns = (x) => linksOf(x).map((u) => `<a class="btn ghost sm" href="${safeUrl(u)}" target="_blank" rel="noopener">${icon("download")} ${esc(linkLabel(u))}</a>`).join("");
 const mapelMap = Object.fromEntries(mapelList.map((m) => [m.id, m]));
 const mid = (x) => (x.mapelId && mapelMap[x.mapelId] ? x.mapelId : "");
 const namaMapel = (x) => mapelMap[mid(x)]?.nama || "Umum";
@@ -127,6 +156,9 @@ const kItem = (k) => {
 
 views.beranda = () => {
   $("#sapa").textContent = "Halo, " + (profile.nama || "Siswa").split(" ")[0];
+  $("#sub").textContent = (kelasNama(profile.kelasId) ? "Kelas " + kelasNama(profile.kelasId) + " · " : "") + "Berikut ringkasan belajar Anda hari ini.";
+  $("#hint").innerHTML = !profile.kelasId && kelasList.length ? `<div class="card" style="margin-bottom:18px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><span>Lengkapi profil Anda dan <b>pilih kelas</b> agar guru dapat melihat nilai Anda per kelas.</span><button class="btn sm" id="hintBtn">Buka profil</button></div>` : "";
+  if ($("#hintBtn")) $("#hintBtn").onclick = () => show("profil");
   const nil = Object.values(subs).filter((s) => s.status === "selesai");
   const avg = nil.length ? Math.round(nil.reduce((a, s) => a + s.nilai, 0) / nil.length) : "-";
   const todo = [...tugas.map((t) => ({ ...t, _k: "tugas" })), ...kuis.map((k) => ({ ...k, _k: "kuis" }))].filter((x) => !subs[x.id]);
@@ -167,7 +199,7 @@ $("#tutup").onclick = () => $("#dlg").close();
 function buka(id) {
   const t = tugas.find((x) => x.id === id), s = subs[id];
   let h = `<h1 style="font-size:1.35rem">${esc(t.judul)}</h1><p class="mute sm" style="margin:4px 0 14px">${t.deadline ? "Tenggat " + fdate(t.deadline) : ""}</p><p class="pre">${esc(t.instruksi)}</p>`;
-  if (t.fileUrl) h += `<a class="btn ghost sm" style="margin-top:12px" href="${safeUrl(t.fileUrl)}" target="_blank" rel="noopener">Unduh lampiran</a>`;
+  if (linksOf(t).length) h += `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">${linkBtns(t)}</div>`;
   if (s) {
     h += `<h2 style="margin-top:24px">Jawaban Anda</h2><div class="ans pre">${esc(s.jawaban)}</div>
       <div class="ans" style="margin-top:12px">${s.status === "selesai" ? `<div class="score">${esc(s.nilai)}</div><p style="margin-top:8px">${esc(s.feedback)}</p>` : '<span class="mute">Menunggu diperiksa guru.</span>'}</div>`;
@@ -178,7 +210,7 @@ function buka(id) {
     $("#isi").innerHTML = h;
     $("#f").onsubmit = async (e) => {
       e.preventDefault();
-      const d = { tugasId: id, tugasJudul: t.judul, siswaId: user.uid, siswaNama: profile.nama || "Siswa", mapelId: t.mapelId || "", jawaban: $("#j").value, link: $("#l").value, status: "belum_diperiksa", nilai: null, feedback: "", createdAt: serverTimestamp() };
+      const d = { tugasId: id, tugasJudul: t.judul, siswaId: user.uid, siswaNama: profile.nama || "Siswa", mapelId: t.mapelId || "", kelasId: profile.kelasId || "", jawaban: $("#j").value, link: $("#l").value, status: "belum_diperiksa", nilai: null, feedback: "", createdAt: serverTimestamp() };
       await setDoc(doc(db, "submissions", id + "_" + user.uid), d);
       subs[id] = d; toast("Jawaban terkirim"); buka(id); views.beranda(); refreshDetail();
     };
@@ -212,5 +244,44 @@ function kerjakan(id) {
   };
   $("#dlg").showModal();
 }
+/* Profil */
+let foto = profile.foto || "";
+const avatarHtml = (f, n) => (f && /^data:image\//.test(f) ? `<img src="${f}" alt="" style="width:100%;height:100%;object-fit:cover">` : esc((n || "?")[0].toUpperCase()));
+function paintProfil() {
+  const nm = $("#pNama").value || profile.nama || "", kl = kelasNama($("#pKelas").value);
+  $("#pAv").innerHTML = avatarHtml(foto, nm);
+  $("#pNm").textContent = nm;
+  $("#pKl").textContent = kl ? "Kelas " + kl : "Kelas belum dipilih";
+  $("#pDs").textContent = $("#pDesk").value || "Belum ada deskripsi.";
+}
+views.profil = () => {
+  $("#pKelas").innerHTML = '<option value="">Pilih kelas</option>' + kelasList.map((k) => `<option value="${esc(k.id)}">${esc(k.nama)}</option>`).join("");
+  $("#pNama").value = profile.nama || ""; $("#pKelas").value = profile.kelasId || ""; $("#pNis").value = profile.nis || ""; $("#pDesk").value = profile.deskripsi || "";
+  foto = profile.foto || ""; paintProfil();
+};
+["pNama", "pKelas", "pDesk"].forEach((id) => ($("#" + id).oninput = paintProfil));
+$("#pFoto").onchange = (e) => {
+  const f = e.target.files[0]; if (!f) return;
+  const img = new Image();
+  img.onload = () => {
+    const c = document.createElement("canvas"); c.width = c.height = 192;
+    const m = Math.min(img.width, img.height);
+    c.getContext("2d").drawImage(img, (img.width - m) / 2, (img.height - m) / 2, m, m, 0, 0, 192, 192);
+    foto = c.toDataURL("image/jpeg", 0.82); paintProfil();
+  };
+  img.src = URL.createObjectURL(f);
+};
+$("#pHapus").onclick = () => { foto = ""; paintProfil(); };
+$("#pForm").onsubmit = async (e) => {
+  e.preventDefault();
+  const data = { nama: $("#pNama").value.trim() || profile.nama || "Siswa", kelasId: $("#pKelas").value, nis: $("#pNis").value.trim(), deskripsi: $("#pDesk").value.trim(), foto };
+  try {
+    await updateDoc(doc(db, "users", user.uid), data);
+    Object.assign(profile, data);
+    const me = document.querySelector(".me");
+    if (me) { me.querySelector(".av").innerHTML = avatarHtml(foto, data.nama); me.querySelector("b").textContent = data.nama; }
+    toast("Profil disimpan"); paintProfil(); views.beranda();
+  } catch (er) { alert("Gagal menyimpan: " + er.message + "\nPastikan firestore.rules terbaru sudah di-Publish."); }
+};
 show("beranda");
 </script></body></html>
