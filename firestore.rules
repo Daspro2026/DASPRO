@@ -21,6 +21,13 @@ service cloud.firestore {
     match /kuis/{id}   { allow read: if signedIn(); allow write: if isAdmin(); }
     // Kunci jawaban: HANYA admin. Siswa tidak bisa membaca sama sekali.
     match /kunci/{id}  { allow read, write: if isAdmin(); }
+    // File jawaban siswa (maks ~700 KB, disimpan sebagai teks base64). Hanya pemilik & guru yang boleh membaca.
+    match /berkas/{id} {
+      allow create: if signedIn() && request.resource.data.siswaId == request.auth.uid
+                    && request.resource.data.data is string && request.resource.data.data.size() < 980000;
+      allow read: if isAdmin() || (signedIn() && resource.data.siswaId == request.auth.uid);
+      allow delete: if isAdmin();
+    }
     match /submissions/{id} {
       allow create: if signedIn() && request.resource.data.siswaId == request.auth.uid
                     && request.resource.data.status == 'belum_diperiksa'
