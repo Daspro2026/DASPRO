@@ -13,13 +13,46 @@ new MutationObserver(fill).observe(document.documentElement, { childList: true, 
 fill();
 
 // ---- Unggah file jawaban
-export const UPLOAD = { maxMB: 10, maxFiles: 5, accept: ".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.csv,.txt,.zip,.png,.jpg,.jpeg,.webp" };
+export const UPLOAD = { maxKB: 700, maxFiles: 3, accept: ".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.csv,.txt,.zip,.png,.jpg,.jpeg,.webp" };
 const MIME = { pdf: "application/pdf", doc: "application/msword", docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", ppt: "application/vnd.ms-powerpoint", pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation", xls: "application/vnd.ms-excel", xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", csv: "text/csv", txt: "text/plain", zip: "application/zip", png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", webp: "image/webp" };
 export const extOf = (n = "") => (n.split(".").pop() || "").toLowerCase();
 export const fileOk = (f) => !!MIME[extOf(f.name)];
 export const mimeOf = (f) => MIME[extOf(f.name)] || f.type || "application/octet-stream";
 export const fmtSize = (b = 0) => (b >= 1048576 ? (b / 1048576).toFixed(1) + " MB" : Math.max(1, Math.round(b / 1024)) + " KB");
-export const fileChips = (arr) => (Array.isArray(arr) && arr.length ? `<div class="files">${arr.map((f) => `<a class="fchip" href="${safeUrl(f.url)}" target="_blank" rel="noopener">${icon("file")}<span class="fn">${esc(f.nama)}</span><small>${fmtSize(f.ukuran)}</small>${icon("download")}</a>`).join("")}</div>` : "");
+export const isImg = (f) => /^image\//.test(mimeOf(f));
+export const toB64 = (b) => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(",")[1]); r.onerror = () => rej(new Error("Gagal membaca file")); r.readAsDataURL(b); });
+// Foto otomatis dikecilkan agar muat di batas ukuran; file lain harus sudah di bawah batas.
+export async function kecilkan(f) {
+  const max = UPLOAD.maxKB * 1024, type = mimeOf(f);
+  if (f.size <= max) return { blob: f, name: f.name, type, size: f.size };
+  if (!isImg(f)) throw new Error(f.name + " lebih dari " + UPLOAD.maxKB + " KB");
+  const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error("Gambar tidak bisa dibaca")); i.src = URL.createObjectURL(f); });
+  let dim = 1600, q = 0.82;
+  for (let t = 0; t < 7; t++) {
+    const sc = Math.min(1, dim / Math.max(img.width, img.height)), c = document.createElement("canvas");
+    c.width = Math.round(img.width * sc); c.height = Math.round(img.height * sc);
+    const x = c.getContext("2d"); x.fillStyle = "#fff"; x.fillRect(0, 0, c.width, c.height); x.drawImage(img, 0, 0, c.width, c.height);
+    const blob = await new Promise((r) => c.toBlob(r, "image/jpeg", q));
+    if (blob && blob.size <= max) return { blob, name: f.name.replace(/\.\w+$/, "") + ".jpg", type: "image/jpeg", size: blob.size };
+    dim *= 0.75; q = Math.max(0.5, q - 0.06);
+  }
+  throw new Error(f.name + " terlalu besar meski sudah dikecilkan");
+}
+// Daftar file (guru & siswa). Isi file dibaca dari koleksi "berkas" hanya saat diklik.
+export const fileChips = (arr) => (Array.isArray(arr) && arr.length ? `<div class="files">${arr.map((f) => `<a class="fchip" href="#" data-fid="${esc(f.id)}" data-fn="${esc(f.nama)}" data-ft="${esc(f.tipe || "")}">${icon("file")}<span class="fn">${esc(f.nama)}</span><small>${fmtSize(f.ukuran)}</small>${icon("download")}</a>`).join("")}</div>` : "");
+export async function bukaBerkas(id, nama, tipe) {
+  const pre = /pdf|image/.test(tipe || "") ? window.open("", "_blank") : null;
+  try {
+    const s = await getDoc(doc(db, "berkas", id));
+    if (!s.exists()) throw new Error("file tidak ditemukan");
+    const bin = atob(s.data().data), u = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+    const url = URL.createObjectURL(new Blob([u], { type: tipe || "application/octet-stream" }));
+    if (pre) pre.location = url; else Object.assign(document.createElement("a"), { href: url, download: nama }).click();
+    setTimeout(() => URL.revokeObjectURL(url), 6e4);
+  } catch (e) { pre?.close(); toast("Gagal membuka file: " + e.message); }
+}
+document.addEventListener("click", (e) => { const a = e.target.closest("[data-fid]"); if (a) { e.preventDefault(); bukaBerkas(a.dataset.fid, a.dataset.fn, a.dataset.ft); } });
 
 export function toast(m) {
   const t = Object.assign(document.createElement("div"), { className: "toast", textContent: m });
