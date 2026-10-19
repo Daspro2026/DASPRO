@@ -8,8 +8,11 @@ service cloud.firestore {
     match /users/{uid} {
       allow read: if signedIn() && (request.auth.uid == uid || isAdmin());
       allow create: if signedIn() && request.auth.uid == uid && request.resource.data.role == 'siswa';
-      allow update, delete: if isAdmin();
+      allow update: if isAdmin() || (signedIn() && request.auth.uid == uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nama','kelasId','nis','deskripsi','foto']));
+      allow delete: if isAdmin();
     }
+    match /kelas/{id}  { allow read: if signedIn(); allow write: if isAdmin(); }
     match /settings/{id} { allow read: if true; allow write: if isAdmin(); }
     match /mapel/{id}  { allow read: if signedIn(); allow write: if isAdmin(); }
     match /meta/{id}   { allow read: if signedIn(); allow write: if isAdmin(); }
