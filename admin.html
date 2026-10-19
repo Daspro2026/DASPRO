@@ -301,7 +301,7 @@ $("#nilaiForm").onsubmit = async (e) => {
 $("#lewat").onclick = () => { if (queue.length) { idx = (idx + 1) % queue.length; tampil(); } };
 
 /* Rekap */
-const berkas = (x) => ((x.files || []).map((f) => `<a class="tag file" href="${safeUrl(f.url)}" target="_blank" rel="noopener" title="${esc(f.nama)}">${icon("file")}${esc(f.nama)}</a>`).join("") + (/^https?:\/\//i.test(x.link || "") ? `<a class="tag file" href="${safeUrl(x.link)}" target="_blank" rel="noopener">${icon("download")}Tautan</a>` : "")) || "-";
+const berkas = (x) => ((x.files || []).map((f) => `<a class="tag file" href="#" data-fid="${esc(f.id)}" data-fn="${esc(f.nama)}" data-ft="${esc(f.tipe || "")}" title="${esc(f.nama)}">${icon("file")}${esc(f.nama)}</a>`).join("") + (/^https?:\/\//i.test(x.link || "") ? `<a class="tag file" href="${safeUrl(x.link)}" target="_blank" rel="noopener">${icon("download")}Tautan</a>` : "")) || "-";
 let done = [];
 views.nilaiS = async () => {
   await loadMapel(); await loadKelas();
@@ -317,7 +317,7 @@ views.nilaiS = async () => {
 $("#csv").onclick = async () => {
   await views.nilaiS();
   const q = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
-  const rows = [["Siswa", "Kelas", "Mapel", "Tugas/Kuis", "Nilai", "Umpan balik", "Berkas"], ...done.map((x) => [x.siswaNama, x._kl, x._m, x.tugasJudul, x.nilai, x.feedback, (x.files || []).map((f) => f.url).concat(x.link ? [x.link] : []).join(" ")])];
+  const rows = [["Siswa", "Kelas", "Mapel", "Tugas/Kuis", "Nilai", "Umpan balik", "Berkas"], ...done.map((x) => [x.siswaNama, x._kl, x._m, x.tugasJudul, x.nilai, x.feedback, (x.files || []).map((f) => f.nama).concat(x.link ? [x.link] : []).join(" ")])];
   const a = document.createElement("a");
   a.href = URL.createObjectURL(new Blob([rows.map((r) => r.map(q).join(",")).join("\n")], { type: "text/csv" }));
   a.download = "rekap-nilai-daspro.csv"; a.click();
