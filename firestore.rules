@@ -12,6 +12,7 @@ service cloud.firestore {
     }
     match /settings/{id} { allow read: if true; allow write: if isAdmin(); }
     match /mapel/{id}  { allow read: if signedIn(); allow write: if isAdmin(); }
+    match /meta/{id}   { allow read: if signedIn(); allow write: if isAdmin(); }
     match /materi/{id} { allow read: if signedIn(); allow write: if isAdmin(); }
     match /tugas/{id}  { allow read: if signedIn(); allow write: if isAdmin(); }
     match /kuis/{id}   { allow read: if signedIn(); allow write: if isAdmin(); }
