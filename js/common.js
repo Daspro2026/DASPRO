@@ -57,7 +57,7 @@ export function guard(needAdmin, tabs, views = {}) {
     const out = () => signOut(auth).then(() => (location.href = "login.html"));
     $(".app").insertAdjacentHTML("afterbegin", `<aside class="side"><div class="logo"><i>D</i>DASPRO</div>
       <nav>${tabs.map(([id, l, ic]) => `<button data-t="${id}"><span data-ic="${ic}"></span>${l}</button>`).join("")}</nav>
-      <div class="me"><div class="av">${esc(nama[0])}</div><div class="who"><b>${esc(nama)}</b><small>${needAdmin ? "Guru (admin)" : "Siswa"}</small></div><button id="keluar" title="Keluar" data-ic="out"></button></div></aside>`);
+      <div class="me"><div class="av" style="overflow:hidden">${profile.foto && /^data:image\//.test(profile.foto) ? `<img src="${profile.foto}" alt="" style="width:100%;height:100%;object-fit:cover">` : esc(nama[0])}</div><div class="who"><b>${esc(nama)}</b><small>${needAdmin ? "Guru (admin)" : "Siswa"}</small></div><button id="keluar" title="Keluar" data-ic="out"></button></div></aside>`);
     $(".main").insertAdjacentHTML("afterbegin", `<div class="mtop"><div class="logo"><i>D</i>DASPRO</div><button id="keluar2" data-ic="out"></button></div>`);
     $("#keluar").onclick = out; $("#keluar2").onclick = out;
     const show = (id) => {
