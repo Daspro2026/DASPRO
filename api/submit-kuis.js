@@ -41,7 +41,7 @@ module.exports = async (req, res) => {
 
     try {
       await db.doc(`submissions/${kuisId}_${user.uid}`).create({
-        jenis: "kuis", mapelId: kuis.mapelId || "", tugasId: kuisId, tugasJudul: "Kuis: " + kuis.judul,
+        jenis: "kuis", mapelId: kuis.mapelId || "", kelasId: userSnap.data()?.kelasId || "", tugasId: kuisId, tugasJudul: "Kuis: " + kuis.judul,
         siswaId: user.uid, siswaNama: userSnap.data()?.nama || user.email || "Siswa",
         jawaban: jawaban, benar, total: jumlah, nilai, feedback, status: "selesai", link: "",
         createdAt: admin.firestore.FieldValue.serverTimestamp()
