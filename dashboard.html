@@ -61,7 +61,7 @@ dialog{border:0;border-radius:22px;max-width:580px;width:calc(100% - 32px);paddi
  .main{padding:20px 18px 100px}.mtop{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
  .g3,.g2,.gp,.gk{grid-template-columns:1fr}.g4{grid-template-columns:1fr 1fr}.banner{padding:24px}
 }
-</style><title>Beranda | DASPRO</title></head><body class="hide">
+</style><title>Beranda | DASPRO</title><link rel="stylesheet" href="css/theme.css"></head><body class="hide">
 <div class="app"><main class="main">
   <section id="beranda"><div class="banner"><h1 id="sapa"></h1><p id="sub">Berikut ringkasan belajar Anda hari ini.</p></div>
     <div id="hint"></div><div class="grid g3" id="stat"></div>
@@ -88,8 +88,8 @@ dialog{border:0;border-radius:22px;max-width:580px;width:calc(100% - 32px);paddi
 </main></div>
 <dialog id="dlg"><div id="isi"></div><button class="btn ghost full" id="tutup">Tutup</button></dialog>
 <script type="module">
-import { auth, db, collection, getDocs, getDoc, query, where, orderBy, doc, setDoc, updateDoc, serverTimestamp } from "./js/firebase.js";
-import { guard, esc, $, safeUrl, fdate, icon, toast } from "./js/common.js";
+import { auth, db, storage, ref, uploadBytes, getDownloadURL, collection, getDocs, getDoc, query, where, orderBy, doc, setDoc, updateDoc, serverTimestamp } from "./js/firebase.js";
+import { guard, esc, $, safeUrl, fdate, icon, toast, UPLOAD, fileOk, mimeOf, fmtSize, fileChips } from "./js/common.js";
 
 const views = {};
 const { user, profile, show } = await guard(false, [["beranda", "Beranda", "home"], ["mapel", "Mata pelajaran", "book"], ["nilai", "Nilai", "star"], ["profil", "Profil", "users"]], views);
@@ -201,18 +201,59 @@ function buka(id) {
   let h = `<h1 style="font-size:1.35rem">${esc(t.judul)}</h1><p class="mute sm" style="margin:4px 0 14px">${t.deadline ? "Tenggat " + fdate(t.deadline) : ""}</p><p class="pre">${esc(t.instruksi)}</p>`;
   if (linksOf(t).length) h += `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">${linkBtns(t)}</div>`;
   if (s) {
-    h += `<h2 style="margin-top:24px">Jawaban Anda</h2><div class="ans pre">${esc(s.jawaban)}</div>
+    h += `<h2 style="margin-top:24px">Jawaban Anda</h2><div class="ans pre">${esc(s.jawaban || "(Tidak ada jawaban teks)")}</div>${fileChips(s.files)}${/^https?:\/\//i.test(s.link || "") ? `<div style="margin-top:10px"><a class="btn ghost sm" href="${safeUrl(s.link)}" target="_blank" rel="noopener">${icon("download")} Buka tautan</a></div>` : ""}
       <div class="ans" style="margin-top:12px">${s.status === "selesai" ? `<div class="score">${esc(s.nilai)}</div><p style="margin-top:8px">${esc(s.feedback)}</p>` : '<span class="mute">Menunggu diperiksa guru.</span>'}</div>`;
     $("#isi").innerHTML = h;
   } else {
-    h += `<form id="f"><label>Jawaban</label><textarea id="j" required placeholder="Tulis jawaban Anda di sini"></textarea>
-      <label>Tautan file (opsional)</label><input id="l" placeholder="https://drive.google.com/..."><button class="btn full">Kirim jawaban</button></form>`;
+    h += `<form id="f"><label>Jawaban</label><textarea id="j" placeholder="Tulis jawaban Anda (boleh kosong jika mengunggah file)"></textarea>
+      <label>Unggah file jawaban (opsional)</label>
+      <label class="drop" id="drop"><input type="file" id="fl" multiple accept="${UPLOAD.accept}">${icon("upload")}<b>Klik atau seret file ke sini</b><small>PDF, Word, PPT, Excel, gambar, ZIP · maks ${UPLOAD.maxMB} MB per file · maks ${UPLOAD.maxFiles} file</small></label>
+      <div class="files" id="fv"></div>
+      <label>Tautan file (opsional)</label><input id="l" placeholder="https://drive.google.com/..."><button class="btn full" id="kirim">Kirim jawaban</button></form>`;
     $("#isi").innerHTML = h;
+    let picked = [];
+    const paintPicked = () => {
+      $("#fv").innerHTML = picked.map((f, i) => `<div class="fchip">${icon("file")}<span class="fn">${esc(f.name)}</span><small>${fmtSize(f.size)}</small><button type="button" data-rm="${i}" title="Hapus">&times;</button></div>`).join("");
+      document.querySelectorAll("#fv [data-rm]").forEach((b) => (b.onclick = () => { picked.splice(+b.dataset.rm, 1); paintPicked(); }));
+    };
+    const addFiles = (list) => {
+      const bad = [];
+      for (const f of list) {
+        if (!fileOk(f)) bad.push(f.name + " (jenis file tidak didukung)");
+        else if (f.size > UPLOAD.maxMB * 1048576) bad.push(f.name + " (lebih dari " + UPLOAD.maxMB + " MB)");
+        else if (picked.length >= UPLOAD.maxFiles) bad.push(f.name + " (maksimal " + UPLOAD.maxFiles + " file)");
+        else if (!picked.some((p) => p.name === f.name && p.size === f.size)) picked.push(f);
+      }
+      paintPicked(); if (bad.length) alert("Tidak bisa ditambahkan:\n- " + bad.join("\n- "));
+    };
+    $("#fl").onchange = (e) => { addFiles([...e.target.files]); e.target.value = ""; };
+    const dz = $("#drop");
+    ["dragenter", "dragover"].forEach((n) => dz.addEventListener(n, (e) => { e.preventDefault(); dz.classList.add("over"); }));
+    ["dragleave", "drop"].forEach((n) => dz.addEventListener(n, (e) => { e.preventDefault(); dz.classList.remove("over"); }));
+    dz.addEventListener("drop", (e) => addFiles([...e.dataTransfer.files]));
     $("#f").onsubmit = async (e) => {
       e.preventDefault();
-      const d = { tugasId: id, tugasJudul: t.judul, siswaId: user.uid, siswaNama: profile.nama || "Siswa", mapelId: t.mapelId || "", kelasId: profile.kelasId || "", jawaban: $("#j").value, link: $("#l").value, status: "belum_diperiksa", nilai: null, feedback: "", createdAt: serverTimestamp() };
-      await setDoc(doc(db, "submissions", id + "_" + user.uid), d);
-      subs[id] = d; toast("Jawaban terkirim"); buka(id); views.beranda(); refreshDetail();
+      const jawab = $("#j").value.trim(), link = $("#l").value.trim();
+      if (!jawab && !picked.length && !link) return alert("Tulis jawaban, unggah file, atau sertakan tautan.");
+      if (link && !/^https?:\/\//i.test(link)) return alert("Tautan harus diawali http:// atau https://");
+      const btn = $("#kirim"); btn.disabled = true;
+      try {
+        const files = [];
+        for (let i = 0; i < picked.length; i++) {
+          const f = picked[i]; btn.textContent = `Mengunggah file ${i + 1} dari ${picked.length}...`;
+          const path = `jawaban/${user.uid}/${id}/${Date.now()}_${i}_${f.name.replace(/[^\w.\-]+/g, "_")}`;
+          const r = ref(storage, path);
+          await uploadBytes(r, f, { contentType: mimeOf(f) });
+          files.push({ nama: f.name, url: await getDownloadURL(r), path, ukuran: f.size, tipe: mimeOf(f) });
+        }
+        btn.textContent = "Mengirim jawaban...";
+        const d = { tugasId: id, tugasJudul: t.judul, siswaId: user.uid, siswaNama: profile.nama || "Siswa", mapelId: t.mapelId || "", kelasId: profile.kelasId || "", jawaban: jawab, link, files, status: "belum_diperiksa", nilai: null, feedback: "", createdAt: serverTimestamp() };
+        await setDoc(doc(db, "submissions", id + "_" + user.uid), d);
+        subs[id] = d; toast("Jawaban terkirim"); buka(id); views.beranda(); refreshDetail();
+      } catch (er) {
+        alert("Gagal mengirim: " + er.message + (picked.length ? "\nPastikan storage.rules terbaru sudah di-Publish di Firebase Storage." : ""));
+        btn.disabled = false; btn.textContent = "Kirim jawaban";
+      }
     };
   }
   $("#dlg").showModal();
