@@ -77,15 +77,23 @@ dialog{border:0;border-radius:22px;max-width:580px;width:calc(100% - 32px);paddi
     <div class="card"><h2>Daftar mata pelajaran</h2><ul class="list" id="mDaftar" style="margin-top:8px"></ul></div>
   </div></section>
 
-<section id="konten" class="hide"><div class="ph"><div><h1>Materi &amp; tugas</h1><p>Tambahkan modul, materi, dan tugas. File disimpan di Google Drive, lalu tautannya ditempel di sini.</p></div></div>
+<section id="kelas" class="hide"><div class="ph"><div><h1>Kelas</h1><p>Buat daftar kelas (misalnya XII A). Siswa memilih kelasnya di menu Profil, lalu nilai mereka bisa dilihat per kelas di Rekap nilai.</p></div></div>
+  <div class="grid gk">
+    <form class="card" id="kelForm"><h2>Tambah kelas</h2>
+      <label>Nama kelas</label><input id="kelNama" required placeholder="Contoh: XII A">
+      <button class="btn full">Tambah</button></form>
+    <div class="card"><h2>Daftar kelas</h2><ul class="list" id="kelDaftar" style="margin-top:8px"></ul></div>
+  </div></section>
+
+<section id="konten" class="hide"><div class="ph"><div><h1>Materi &amp; tugas</h1><p>Tambahkan modul, materi, dan tugas. Tempel tautan dari mana saja (Google Drive, YouTube, Canva, Notion, website lain).</p></div></div>
   <div class="grid gk">
     <form class="card" id="form"><h2>Tambah konten baru</h2><label>Mata pelajaran</label><select id="tMapel"></select>
       <label>Jenis</label><select id="tipe"><option value="materi">Materi</option><option value="modul">Modul</option><option value="tugas">Tugas</option></select>
       <label>Judul</label><input id="judul" required placeholder="Contoh: Modul 3 Perulangan">
       <label id="lDesk">Deskripsi</label><textarea id="desk"></textarea>
       <div id="wDead" class="hide"><label>Tenggat</label><input id="dead" type="date"></div>
-      <label>Tautan file (Google Drive, YouTube, dll)</label><input id="link" type="url" placeholder="https://drive.google.com/...">
-      <p class="mute sm" style="margin-top:6px">Di Google Drive: klik kanan file &gt; Bagikan &gt; Akses umum: <b>Siapa saja yang memiliki link</b> (Pelihat), lalu Salin link.</p>
+      <label>Tautan (boleh lebih dari satu)</label><textarea id="link" style="min-height:84px" placeholder="https://drive.google.com/...&#10;https://youtube.com/...&#10;https://canva.com/..."></textarea>
+      <p class="mute sm" style="margin-top:6px">Tempel tautan dari mana saja: Google Drive, YouTube, Canva, Notion, OneDrive, GitHub, atau website lain. Satu tautan per baris. Pastikan akses file diatur &quot;siapa saja yang memiliki link&quot;.</p>
       <button class="btn full" id="simpan">Simpan</button></form>
     <div class="card"><div class="row" style="justify-content:space-between"><h2>Sudah diunggah</h2><select id="cFilter" style="width:auto;max-width:200px"></select></div><ul class="list" id="daftar" style="margin-top:8px"></ul></div>
   </div></section>
@@ -103,7 +111,7 @@ dialog{border:0;border-radius:22px;max-width:580px;width:calc(100% - 32px);paddi
   </div></section>
 
 <section id="nilaiS" class="hide"><div class="ph"><div><h1>Rekap nilai</h1><p>Semua jawaban yang sudah dinilai.</p></div>
-  <div style="display:flex;gap:10px;align-items:center"><select id="rMapel" style="width:auto;max-width:200px"></select><button class="btn ghost" id="csv">Unduh CSV</button></div></div><div class="card" style="overflow-x:auto" id="rekap"></div></section>
+  <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><select id="rKelas" style="width:auto;max-width:200px"></select><select id="rJenis" style="width:auto;max-width:200px"><option value="*">Kuis &amp; tugas</option><option value="kuis">Hanya kuis</option><option value="tugas">Hanya tugas</option></select><select id="rMapel" style="width:auto;max-width:200px"></select><button class="btn ghost" id="csv">Unduh CSV</button></div></div><div class="card" style="overflow-x:auto" id="rekap"></div></section>
 
 <section id="kuis" class="hide"><div class="ph"><div><h1>Kuis</h1><p>Buat soal pilihan ganda. Kunci jawaban hanya bisa dilihat guru, dan nilai siswa dihitung otomatis.</p></div></div>
   <style>.qrad{width:auto!important;padding:0!important;accent-color:var(--brand);flex:none}</style>
@@ -139,7 +147,7 @@ import { db, storage, collection, getDocs, addDoc, deleteDoc, updateDoc, doc, qu
 import { guard, esc, $, ago, icon, toast, applySettings } from "./js/common.js";
 
 const views = {};
-const { show } = await guard(true, [["ringkasan", "Ringkasan", "grid"], ["mapel", "Mata pelajaran", "book"], ["konten", "Materi & Tugas", "upload"], ["periksa", "Periksa", "check"], ["kuis", "Kuis", "edit"], ["nilaiS", "Rekap nilai", "star"], ["setelan", "Pengaturan", "sliders"]], views);
+const { show } = await guard(true, [["ringkasan", "Ringkasan", "grid"], ["mapel", "Mata pelajaran", "book"], ["kelas", "Kelas", "users"], ["konten", "Materi & Tugas", "upload"], ["periksa", "Periksa", "check"], ["kuis", "Kuis", "edit"], ["nilaiS", "Rekap nilai", "star"], ["setelan", "Pengaturan", "sliders"]], views);
 const all = async (c) => (await getDocs(collection(db, c))).docs.map((d) => ({ id: d.id, ...d.data() }));
 const kosong = (t) => `<div class="empty">${t}</div>`;
 $("#keP").onclick = () => show("periksa");
@@ -187,6 +195,37 @@ $("#mForm").onsubmit = async (e) => {
 $("#cFilter").onchange = () => views.konten();
 $("#rMapel").onchange = () => views.nilaiS();
 
+/* Kelas */
+let kelasAll = [];
+const kOf = (id) => (kelasAll.some((k) => k.id === id) ? id : "");
+const kelasNama = (id) => kelasAll.find((k) => k.id === id)?.nama || "Tanpa kelas";
+async function loadKelas() {
+  kelasAll = (await getDocs(query(collection(db, "kelas"), orderBy("createdAt", "desc")))).docs.map((d) => ({ id: d.id, ...d.data() })).reverse();
+  const el = $("#rKelas");
+  if (el) { const v = el.value; el.innerHTML = opt("*", "Semua kelas") + opt("", "Tanpa kelas") + kelasAll.map((k) => opt(k.id, k.nama)).join(""); if ([...el.options].some((o) => o.value === v)) el.value = v; }
+}
+views.kelas = async () => {
+  await loadKelas();
+  $("#kelDaftar").innerHTML = kelasAll.map((k) => `<li><div class="row"><div class="fi">${icon("users")}</div><b>${esc(k.nama)}</b></div>
+    <div style="display:flex;gap:6px"><button class="btn ghost sm" data-r="${k.id}" title="Ubah nama">${icon("edit")}</button><button class="btn ghost sm" data-x="${k.id}" title="Hapus" style="color:var(--bad)">${icon("trash")}</button></div></li>`).join("") || kosong("Belum ada kelas. Tambahkan yang pertama, misalnya XII A.");
+  document.querySelectorAll("#kelDaftar [data-r]").forEach((b) => (b.onclick = async () => {
+    const n = prompt("Nama baru kelas:", kelasNama(b.dataset.r));
+    if (n && n.trim()) { await updateDoc(doc(db, "kelas", b.dataset.r), { nama: n.trim() }); await bump(); toast("Nama diubah"); views.kelas(); }
+  }));
+  document.querySelectorAll("#kelDaftar [data-x]").forEach((b) => (b.onclick = async () => {
+    if (!confirm("Hapus kelas ini? Siswa di kelas ini akan tampil sebagai 'Tanpa kelas' sampai memilih kelas lain.")) return;
+    await deleteDoc(doc(db, "kelas", b.dataset.x)); await bump(); toast("Dihapus"); views.kelas();
+  }));
+};
+$("#kelForm").onsubmit = async (e) => {
+  e.preventDefault();
+  const id = "c" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+  try { await setDoc(doc(db, "kelas", id), { nama: $("#kelNama").value.trim(), createdAt: serverTimestamp() }); await bump(); e.target.reset(); toast("Kelas ditambahkan"); views.kelas(); }
+  catch (er) { alert("Gagal menyimpan: " + er.message + "\nPastikan firestore.rules terbaru sudah di-Publish."); }
+};
+$("#rKelas").onchange = () => views.nilaiS();
+$("#rJenis").onchange = () => views.nilaiS();
+
 /* Hemat kuota */
 const bump = () => setDoc(doc(db, "meta", "versi"), { t: Date.now() }).catch(() => {});
 let rekapCache = null;
@@ -222,11 +261,12 @@ views.konten = async () => {
 $("#form").onsubmit = async (e) => {
   e.preventDefault(); $("#simpan").disabled = true; $("#simpan").textContent = "Menyimpan...";
   try {
-    const fileUrl = $("#link").value.trim();
-    if (fileUrl && !/^https?:\/\//i.test(fileUrl)) throw new Error("Tautan harus diawali https://");
+    const links = $("#link").value.split(/\s+/).map((x) => x.trim()).filter(Boolean);
+    if (links.some((u) => !/^https?:\/\//i.test(u))) throw new Error("Setiap tautan harus diawali http:// atau https://");
+    const fileUrl = links[0] || "";
         const tipe = $("#tipe").value;
-    if (tipe === "tugas") await addDoc(collection(db, "tugas"), { mapelId: $("#tMapel").value, judul: $("#judul").value, instruksi: $("#desk").value, deadline: $("#dead").value, fileUrl, createdAt: serverTimestamp() });
-    else await addDoc(collection(db, "materi"), { mapelId: $("#tMapel").value, judul: $("#judul").value, deskripsi: $("#desk").value, tipe, fileUrl, createdAt: serverTimestamp() });
+    if (tipe === "tugas") await addDoc(collection(db, "tugas"), { mapelId: $("#tMapel").value, judul: $("#judul").value, instruksi: $("#desk").value, deadline: $("#dead").value, fileUrl, links, createdAt: serverTimestamp() });
+    else await addDoc(collection(db, "materi"), { mapelId: $("#tMapel").value, judul: $("#judul").value, deskripsi: $("#desk").value, tipe, fileUrl, links, createdAt: serverTimestamp() });
     await bump(); e.target.reset(); $("#tipe").onchange(); toast("Tersimpan"); views.konten();
   } catch (er) { alert("Gagal menyimpan: " + er.message); }
   $("#simpan").disabled = false; $("#simpan").textContent = "Simpan";
@@ -262,20 +302,20 @@ $("#lewat").onclick = () => { if (queue.length) { idx = (idx + 1) % queue.length
 /* Rekap */
 let done = [];
 views.nilaiS = async () => {
-  await loadMapel();
+  await loadMapel(); await loadKelas();
   const src = {};
   [...(await all("tugas")), ...(await all("kuis"))].forEach((x) => (src[x.id] = x.mapelId || ""));
   const f = $("#rMapel").value;
   if (!rekapCache || Date.now() - rekapCache.t > 3e5) rekapCache = { t: Date.now(), rows: (await getDocs(query(collection(db, "submissions"), where("status", "==", "selesai")))).docs.map((d) => ({ id: d.id, ...d.data() })) };
   done = rekapCache.rows
-    .map((x) => { const id = mOf(x.mapelId || src[x.tugasId] || ""); return { ...x, _id: id, _m: mapelNama(id) }; })
-    .filter((x) => f === "*" || x._id === f);
-  $("#rekap").innerHTML = done.length ? `<table><tr><th>Siswa</th><th>Mapel</th><th>Tugas / kuis</th><th>Nilai</th><th>Umpan balik</th></tr>${done.map((x) => `<tr><td><b>${esc(x.siswaNama)}</b></td><td>${esc(x._m)}</td><td>${esc(x.tugasJudul)}</td><td><span class="tag ok">${esc(x.nilai)}</span></td><td class="mute">${esc(x.feedback || "-")}</td></tr>`).join("")}</table>` : kosong("Belum ada nilai.");
+    .map((x) => { const id = mOf(x.mapelId || src[x.tugasId] || ""); const kid = kOf(x.kelasId); return { ...x, _id: id, _m: mapelNama(id), _kid: kid, _kl: kid ? kelasNama(kid) : "Tanpa kelas" }; })
+    .filter((x) => (f === "*" || x._id === f) && ($("#rKelas").value === "*" || x._kid === $("#rKelas").value) && ($("#rJenis").value === "*" || (x.jenis === "kuis") === ($("#rJenis").value === "kuis")));
+  $("#rekap").innerHTML = done.length ? `<p class="mute sm" style="margin-bottom:12px">${done.length} hasil · rata-rata nilai ${Math.round(done.reduce((a, x) => a + (Number(x.nilai) || 0), 0) / done.length)}</p><table><tr><th>Siswa</th><th>Kelas</th><th>Mapel</th><th>Tugas / kuis</th><th>Nilai</th><th>Umpan balik</th></tr>${done.map((x) => `<tr><td><b>${esc(x.siswaNama)}</b></td><td>${esc(x._kl)}</td><td>${esc(x._m)}</td><td>${esc(x.tugasJudul)}</td><td><span class="tag ok">${esc(x.nilai)}</span></td><td class="mute">${esc(x.feedback || "-")}</td></tr>`).join("")}</table>` : kosong("Belum ada nilai.");
 };
 $("#csv").onclick = async () => {
   await views.nilaiS();
   const q = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
-  const rows = [["Siswa", "Mapel", "Tugas/Kuis", "Nilai", "Umpan balik"], ...done.map((x) => [x.siswaNama, x._m, x.tugasJudul, x.nilai, x.feedback])];
+  const rows = [["Siswa", "Kelas", "Mapel", "Tugas/Kuis", "Nilai", "Umpan balik"], ...done.map((x) => [x.siswaNama, x._kl, x._m, x.tugasJudul, x.nilai, x.feedback])];
   const a = document.createElement("a");
   a.href = URL.createObjectURL(new Blob([rows.map((r) => r.map(q).join(",")).join("\n")], { type: "text/csv" }));
   a.download = "rekap-nilai-daspro.csv"; a.click();
@@ -367,6 +407,6 @@ $("#setForm").onsubmit = async (e) => {
     localStorage.setItem("daspro_set", JSON.stringify(cur)); toast("Pengaturan tersimpan");
   } catch (er) { alert("Gagal menyimpan. Pastikan firestore.rules terbaru sudah di-Publish di Firebase.\n" + er.message); }
 };
-loadMapel();
+loadMapel(); loadKelas();
 show("ringkasan");
 </script></body></html>
