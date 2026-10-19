@@ -57,7 +57,7 @@ dialog{border:0;border-radius:22px;max-width:580px;width:calc(100% - 32px);paddi
 .err{color:var(--bad);font-size:.85rem;margin-top:12px}
 @media(max-width:860px){
  .app{grid-template-columns:1fr}.side{position:fixed;top:auto;bottom:0;left:0;right:0;height:auto;z-index:20;flex-direction:row;padding:6px;border-right:0;border-top:1px solid var(--line)}
- .side .logo,.me{display:none}.side nav{flex-direction:row;width:100%;justify-content:space-around}.side nav button{flex-direction:column;gap:2px;font-size:.7rem;padding:8px 10px}
+ .side .logo,.me{display:none}.side nav{flex-direction:row;width:100%;justify-content:flex-start;overflow-x:auto}.side nav button{flex-direction:column;gap:2px;font-size:.7rem;padding:8px 10px;flex:1 0 auto;white-space:nowrap}
  .main{padding:20px 18px 100px}.mtop{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
  .g3,.g2,.gp,.gk{grid-template-columns:1fr}.g4{grid-template-columns:1fr 1fr}.banner{padding:24px}
 }
@@ -69,16 +69,24 @@ dialog{border:0;border-radius:22px;max-width:580px;width:calc(100% - 32px);paddi
   <div class="grid g4" id="angka"></div>
   <div class="sec"><h2>Antrean pemeriksaan terbaru</h2></div><div class="card"><ul class="list" id="antre"></ul></div></section>
 
+<section id="mapel" class="hide"><div class="ph"><div><h1>Mata pelajaran</h1><p>Buat mata pelajaran, lalu pilih mata pelajaran saat mengunggah materi, tugas, atau kuis.</p></div></div>
+  <div class="grid gk">
+    <form class="card" id="mForm"><h2>Tambah mata pelajaran</h2>
+      <label>Nama mata pelajaran</label><input id="mNama" required placeholder="Contoh: Informatika">
+      <button class="btn full">Tambah</button></form>
+    <div class="card"><h2>Daftar mata pelajaran</h2><ul class="list" id="mDaftar" style="margin-top:8px"></ul></div>
+  </div></section>
+
 <section id="konten" class="hide"><div class="ph"><div><h1>Materi &amp; tugas</h1><p>Unggah modul, materi, dan tugas untuk siswa.</p></div></div>
   <div class="grid gk">
-    <form class="card" id="form"><h2>Tambah konten baru</h2>
+    <form class="card" id="form"><h2>Tambah konten baru</h2><label>Mata pelajaran</label><select id="tMapel"></select>
       <label>Jenis</label><select id="tipe"><option value="materi">Materi</option><option value="modul">Modul</option><option value="tugas">Tugas</option></select>
       <label>Judul</label><input id="judul" required placeholder="Contoh: Modul 3 Perulangan">
       <label id="lDesk">Deskripsi</label><textarea id="desk"></textarea>
       <div id="wDead" class="hide"><label>Tenggat</label><input id="dead" type="date"></div>
       <label>File (PDF, PPT, gambar)</label><input id="file" type="file">
       <button class="btn full" id="simpan">Simpan</button></form>
-    <div class="card"><h2>Sudah diunggah</h2><ul class="list" id="daftar" style="margin-top:8px"></ul></div>
+    <div class="card"><div class="row" style="justify-content:space-between"><h2>Sudah diunggah</h2><select id="cFilter" style="width:auto;max-width:200px"></select></div><ul class="list" id="daftar" style="margin-top:8px"></ul></div>
   </div></section>
 
 <section id="periksa" class="hide"><div class="ph"><div><h1>Periksa jawaban</h1><p id="sisa"></p></div></div>
@@ -94,12 +102,12 @@ dialog{border:0;border-radius:22px;max-width:580px;width:calc(100% - 32px);paddi
   </div></section>
 
 <section id="nilaiS" class="hide"><div class="ph"><div><h1>Rekap nilai</h1><p>Semua jawaban yang sudah dinilai.</p></div>
-  <button class="btn ghost" id="csv">Unduh CSV</button></div><div class="card" style="overflow-x:auto" id="rekap"></div></section>
+  <div style="display:flex;gap:10px;align-items:center"><select id="rMapel" style="width:auto;max-width:200px"></select><button class="btn ghost" id="csv">Unduh CSV</button></div></div><div class="card" style="overflow-x:auto" id="rekap"></div></section>
 
 <section id="kuis" class="hide"><div class="ph"><div><h1>Kuis</h1><p>Buat soal pilihan ganda. Kunci jawaban hanya bisa dilihat guru, dan nilai siswa dihitung otomatis.</p></div></div>
   <style>.qrad{width:auto!important;padding:0!important;accent-color:var(--brand);flex:none}</style>
   <div class="grid gk">
-    <form class="card" id="kForm"><h2>Buat kuis baru</h2>
+    <form class="card" id="kForm"><h2>Buat kuis baru</h2><label>Mata pelajaran</label><select id="kMapel"></select>
       <label>Judul kuis</label><input id="kJudul" required placeholder="Contoh: Kuis Algoritma Bab 1">
       <label>Deskripsi (opsional)</label><input id="kDesk">
       <div id="soalBox"></div>
@@ -130,10 +138,53 @@ import { db, storage, collection, getDocs, addDoc, deleteDoc, updateDoc, doc, qu
 import { guard, esc, $, ago, icon, toast, applySettings } from "./js/common.js";
 
 const views = {};
-const { show } = await guard(true, [["ringkasan", "Ringkasan", "grid"], ["konten", "Materi & Tugas", "upload"], ["periksa", "Periksa", "check"], ["kuis", "Kuis", "edit"], ["nilaiS", "Rekap nilai", "star"], ["setelan", "Pengaturan", "sliders"]], views);
+const { show } = await guard(true, [["ringkasan", "Ringkasan", "grid"], ["mapel", "Mata pelajaran", "book"], ["konten", "Materi & Tugas", "upload"], ["periksa", "Periksa", "check"], ["kuis", "Kuis", "edit"], ["nilaiS", "Rekap nilai", "star"], ["setelan", "Pengaturan", "sliders"]], views);
 const all = async (c) => (await getDocs(collection(db, c))).docs.map((d) => ({ id: d.id, ...d.data() }));
 const kosong = (t) => `<div class="empty">${t}</div>`;
 $("#keP").onclick = () => show("periksa");
+
+/* Mata pelajaran */
+let mapelAll = [];
+const opt = (v, t) => `<option value="${esc(v)}">${esc(t)}</option>`;
+const mOf = (id) => (mapelAll.some((m) => m.id === id) ? id : "");
+const mapelNama = (id) => mapelAll.find((m) => m.id === id)?.nama || "Umum";
+function fillMapelSelects() {
+  const list = mapelAll.map((m) => opt(m.id, m.nama)).join("");
+  const set = (sel, html) => { const el = $(sel); if (!el) return; const v = el.value; el.innerHTML = html; if ([...el.options].some((o) => o.value === v)) el.value = v; };
+  set("#tMapel", opt("", "Umum (tanpa mata pelajaran)") + list);
+  set("#kMapel", opt("", "Umum (tanpa mata pelajaran)") + list);
+  set("#cFilter", opt("*", "Semua mata pelajaran") + opt("", "Umum") + list);
+  set("#rMapel", opt("*", "Semua mata pelajaran") + opt("", "Umum") + list);
+}
+async function loadMapel() {
+  mapelAll = (await getDocs(query(collection(db, "mapel"), orderBy("createdAt", "desc")))).docs.map((d) => ({ id: d.id, ...d.data() })).reverse();
+  fillMapelSelects();
+}
+views.mapel = async () => {
+  await loadMapel();
+  const [m, t, k] = await Promise.all(["materi", "tugas", "kuis"].map(all));
+  $("#mDaftar").innerHTML = mapelAll.map((x) => {
+    const n = [m, t, k].map((a) => a.filter((i) => mOf(i.mapelId) === x.id).length);
+    return `<li><div class="row"><div class="fi">${icon("book")}</div><div><b>${esc(x.nama)}</b><div class="mute sm">${n[0]} materi · ${n[1]} tugas · ${n[2]} kuis</div></div></div>
+      <div style="display:flex;gap:6px"><button class="btn ghost sm" data-r="${x.id}" title="Ubah nama">${icon("edit")}</button><button class="btn ghost sm" data-x="${x.id}" title="Hapus" style="color:var(--bad)">${icon("trash")}</button></div></li>`;
+  }).join("") || kosong("Belum ada mata pelajaran. Tambahkan yang pertama.");
+  document.querySelectorAll("#mDaftar [data-r]").forEach((b) => (b.onclick = async () => {
+    const n = prompt("Nama baru mata pelajaran:", mapelNama(b.dataset.r));
+    if (n && n.trim()) { await updateDoc(doc(db, "mapel", b.dataset.r), { nama: n.trim() }); toast("Nama diubah"); views.mapel(); }
+  }));
+  document.querySelectorAll("#mDaftar [data-x]").forEach((b) => (b.onclick = async () => {
+    if (!confirm("Hapus mata pelajaran ini? Materi, tugas, dan kuis di dalamnya tidak dihapus, tetapi dipindahkan ke 'Umum'.")) return;
+    await deleteDoc(doc(db, "mapel", b.dataset.x)); toast("Dihapus"); views.mapel();
+  }));
+};
+$("#mForm").onsubmit = async (e) => {
+  e.preventDefault();
+  const id = "m" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+  try { await setDoc(doc(db, "mapel", id), { nama: $("#mNama").value.trim(), createdAt: serverTimestamp() }); e.target.reset(); toast("Mata pelajaran ditambahkan"); views.mapel(); }
+  catch (er) { alert("Gagal menyimpan: " + er.message + "\nPastikan firestore.rules terbaru sudah di-Publish."); }
+};
+$("#cFilter").onchange = () => views.konten();
+$("#rMapel").onchange = () => views.nilaiS();
 
 /* Ringkasan */
 views.ringkasan = async () => {
@@ -147,9 +198,10 @@ views.ringkasan = async () => {
 /* Konten */
 $("#tipe").onchange = () => { const t = $("#tipe").value === "tugas"; $("#wDead").classList.toggle("hide", !t); $("#lDesk").textContent = t ? "Instruksi" : "Deskripsi"; };
 views.konten = async () => {
+  await loadMapel();
   const get = async (c) => (await getDocs(query(collection(db, c), orderBy("createdAt", "desc")))).docs.map((d) => ({ id: d.id, col: c, ...d.data() }));
-  const items = [...(await get("materi")), ...(await get("tugas"))];
-  $("#daftar").innerHTML = items.map((i) => `<li><div class="row"><div class="fi">${icon(i.col === "tugas" ? "task" : i.tipe === "modul" ? "book" : "file")}</div><div><b>${esc(i.judul)}</b><div class="mute sm">${i.col === "tugas" ? "Tugas" : esc(i.tipe)}</div></div></div>
+  const items = [...(await get("materi")), ...(await get("tugas"))].filter((i) => $("#cFilter").value === "*" || mOf(i.mapelId) === $("#cFilter").value);
+  $("#daftar").innerHTML = items.map((i) => `<li><div class="row"><div class="fi">${icon(i.col === "tugas" ? "task" : i.tipe === "modul" ? "book" : "file")}</div><div><b>${esc(i.judul)}</b><div class="mute sm">${i.col === "tugas" ? "Tugas" : esc(i.tipe)} · ${esc(mapelNama(i.mapelId))}</div></div></div>
     <button class="btn ghost sm" data-c="${i.col}" data-id="${i.id}" style="color:var(--bad)">${icon("trash")}</button></li>`).join("") || kosong("Belum ada konten. Tambahkan yang pertama.");
   document.querySelectorAll("#daftar button").forEach((b) => (b.onclick = async () => {
     if (confirm("Hapus item ini?")) { await deleteDoc(doc(db, b.dataset.c, b.dataset.id)); toast("Dihapus"); views.konten(); }
@@ -161,8 +213,8 @@ $("#form").onsubmit = async (e) => {
     let fileUrl = ""; const f = $("#file").files[0];
     if (f) { const r = ref(storage, `files/${Date.now()}_${f.name}`); await uploadBytes(r, f); fileUrl = await getDownloadURL(r); }
     const tipe = $("#tipe").value;
-    if (tipe === "tugas") await addDoc(collection(db, "tugas"), { judul: $("#judul").value, instruksi: $("#desk").value, deadline: $("#dead").value, fileUrl, createdAt: serverTimestamp() });
-    else await addDoc(collection(db, "materi"), { judul: $("#judul").value, deskripsi: $("#desk").value, tipe, fileUrl, createdAt: serverTimestamp() });
+    if (tipe === "tugas") await addDoc(collection(db, "tugas"), { mapelId: $("#tMapel").value, judul: $("#judul").value, instruksi: $("#desk").value, deadline: $("#dead").value, fileUrl, createdAt: serverTimestamp() });
+    else await addDoc(collection(db, "materi"), { mapelId: $("#tMapel").value, judul: $("#judul").value, deskripsi: $("#desk").value, tipe, fileUrl, createdAt: serverTimestamp() });
     e.target.reset(); $("#tipe").onchange(); toast("Tersimpan"); views.konten();
   } catch (er) { alert("Gagal menyimpan: " + er.message); }
   $("#simpan").disabled = false; $("#simpan").textContent = "Simpan";
@@ -198,13 +250,19 @@ $("#lewat").onclick = () => { if (queue.length) { idx = (idx + 1) % queue.length
 /* Rekap */
 let done = [];
 views.nilaiS = async () => {
-  done = (await all("submissions")).filter((x) => x.status === "selesai");
-  $("#rekap").innerHTML = done.length ? `<table><tr><th>Siswa</th><th>Tugas</th><th>Nilai</th><th>Umpan balik</th></tr>${done.map((x) => `<tr><td><b>${esc(x.siswaNama)}</b></td><td>${esc(x.tugasJudul)}</td><td><span class="tag ok">${esc(x.nilai)}</span></td><td class="mute">${esc(x.feedback || "-")}</td></tr>`).join("")}</table>` : kosong("Belum ada nilai.");
+  await loadMapel();
+  const src = {};
+  [...(await all("tugas")), ...(await all("kuis"))].forEach((x) => (src[x.id] = x.mapelId || ""));
+  const f = $("#rMapel").value;
+  done = (await all("submissions")).filter((x) => x.status === "selesai")
+    .map((x) => { const id = mOf(x.mapelId || src[x.tugasId] || ""); return { ...x, _id: id, _m: mapelNama(id) }; })
+    .filter((x) => f === "*" || x._id === f);
+  $("#rekap").innerHTML = done.length ? `<table><tr><th>Siswa</th><th>Mapel</th><th>Tugas / kuis</th><th>Nilai</th><th>Umpan balik</th></tr>${done.map((x) => `<tr><td><b>${esc(x.siswaNama)}</b></td><td>${esc(x._m)}</td><td>${esc(x.tugasJudul)}</td><td><span class="tag ok">${esc(x.nilai)}</span></td><td class="mute">${esc(x.feedback || "-")}</td></tr>`).join("")}</table>` : kosong("Belum ada nilai.");
 };
 $("#csv").onclick = async () => {
   await views.nilaiS();
   const q = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
-  const rows = [["Siswa", "Tugas", "Nilai", "Umpan balik"], ...done.map((x) => [x.siswaNama, x.tugasJudul, x.nilai, x.feedback])];
+  const rows = [["Siswa", "Mapel", "Tugas/Kuis", "Nilai", "Umpan balik"], ...done.map((x) => [x.siswaNama, x._m, x.tugasJudul, x.nilai, x.feedback])];
   const a = document.createElement("a");
   a.href = URL.createObjectURL(new Blob([rows.map((r) => r.map(q).join(",")).join("\n")], { type: "text/csv" }));
   a.download = "rekap-nilai-daspro.csv"; a.click();
@@ -230,9 +288,10 @@ $("#soalBox").addEventListener("input", (e) => {
 $("#soalBox").addEventListener("change", (e) => { if (e.target.type === "radio") soalList[+e.target.dataset.i].benar = +e.target.dataset.j; });
 $("#soalBox").addEventListener("click", (e) => { const d = e.target.closest("[data-del]"); if (d) { soalList.splice(+d.dataset.del, 1); renderSoal(); } });
 views.kuis = async () => {
+  await loadMapel();
   if (!soalList.length) { soalList = [baru()]; renderSoal(); }
   const ks = (await getDocs(query(collection(db, "kuis"), orderBy("createdAt", "desc")))).docs.map((d) => ({ id: d.id, ...d.data() }));
-  $("#kDaftar").innerHTML = ks.map((k) => `<li><div class="row"><div class="fi">${icon("edit")}</div><div><b>${esc(k.judul)}</b><div class="mute sm">${(k.soal || []).length} soal</div></div></div>
+  $("#kDaftar").innerHTML = ks.map((k) => `<li><div class="row"><div class="fi">${icon("edit")}</div><div><b>${esc(k.judul)}</b><div class="mute sm">${(k.soal || []).length} soal · ${esc(mapelNama(k.mapelId))}</div></div></div>
     <button class="btn ghost sm" data-id="${k.id}" style="color:var(--bad)">${icon("trash")}</button></li>`).join("") || kosong("Belum ada kuis.");
   document.querySelectorAll("#kDaftar button").forEach((b) => (b.onclick = async () => {
     if (!confirm("Hapus kuis ini beserta kunci jawabannya? Nilai siswa yang sudah masuk tetap tersimpan.")) return;
@@ -255,7 +314,7 @@ $("#kForm").onsubmit = async (e) => {
   const id = "k" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   try {
     await setDoc(doc(db, "kunci", id), { kunci });
-    await setDoc(doc(db, "kuis", id), { judul: $("#kJudul").value.trim(), deskripsi: $("#kDesk").value.trim(), soal, createdAt: serverTimestamp() });
+    await setDoc(doc(db, "kuis", id), { mapelId: $("#kMapel").value, judul: $("#kJudul").value.trim(), deskripsi: $("#kDesk").value.trim(), soal, createdAt: serverTimestamp() });
     e.target.reset(); soalList = [baru()]; renderSoal(); toast("Kuis tersimpan"); views.kuis();
   } catch (er) { alert("Gagal menyimpan: " + er.message + "\nPastikan firestore.rules terbaru sudah di-Publish."); }
   $("#kSimpan").disabled = false;
@@ -295,5 +354,6 @@ $("#setForm").onsubmit = async (e) => {
     localStorage.setItem("daspro_set", JSON.stringify(cur)); toast("Pengaturan tersimpan");
   } catch (er) { alert("Gagal menyimpan. Pastikan firestore.rules terbaru sudah di-Publish di Firebase.\n" + er.message); }
 };
+loadMapel();
 show("ringkasan");
 </script></body></html>
