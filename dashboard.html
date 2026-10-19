@@ -88,8 +88,8 @@ dialog{border:0;border-radius:22px;max-width:580px;width:calc(100% - 32px);paddi
 </main></div>
 <dialog id="dlg"><div id="isi"></div><button class="btn ghost full" id="tutup">Tutup</button></dialog>
 <script type="module">
-import { auth, db, storage, ref, uploadBytes, getDownloadURL, collection, getDocs, getDoc, query, where, orderBy, doc, setDoc, updateDoc, serverTimestamp } from "./js/firebase.js";
-import { guard, esc, $, safeUrl, fdate, icon, toast, UPLOAD, fileOk, mimeOf, fmtSize, fileChips } from "./js/common.js";
+import { auth, db, collection, getDocs, getDoc, query, where, orderBy, doc, setDoc, updateDoc, serverTimestamp } from "./js/firebase.js";
+import { guard, esc, $, safeUrl, fdate, icon, toast, UPLOAD, fileOk, mimeOf, fmtSize, fileChips, isImg, kecilkan, toB64 } from "./js/common.js";
 
 const views = {};
 const { user, profile, show } = await guard(false, [["beranda", "Beranda", "home"], ["mapel", "Mata pelajaran", "book"], ["nilai", "Nilai", "star"], ["profil", "Profil", "users"]], views);
@@ -207,7 +207,7 @@ function buka(id) {
   } else {
     h += `<form id="f"><label>Jawaban</label><textarea id="j" placeholder="Tulis jawaban Anda (boleh kosong jika mengunggah file)"></textarea>
       <label>Unggah file jawaban (opsional)</label>
-      <label class="drop" id="drop"><input type="file" id="fl" multiple accept="${UPLOAD.accept}">${icon("upload")}<b>Klik atau seret file ke sini</b><small>PDF, Word, PPT, Excel, gambar, ZIP · maks ${UPLOAD.maxMB} MB per file · maks ${UPLOAD.maxFiles} file</small></label>
+      <label class="drop" id="drop"><input type="file" id="fl" multiple accept="${UPLOAD.accept}">${icon("upload")}<b>Klik atau seret file ke sini</b><small>PDF, Word, PPT, Excel, gambar, ZIP · maks ${UPLOAD.maxKB} KB per file (foto otomatis dikecilkan) · maks ${UPLOAD.maxFiles} file</small></label>
       <div class="files" id="fv"></div>
       <label>Tautan file (opsional)</label><input id="l" placeholder="https://drive.google.com/..."><button class="btn full" id="kirim">Kirim jawaban</button></form>`;
     $("#isi").innerHTML = h;
@@ -220,7 +220,7 @@ function buka(id) {
       const bad = [];
       for (const f of list) {
         if (!fileOk(f)) bad.push(f.name + " (jenis file tidak didukung)");
-        else if (f.size > UPLOAD.maxMB * 1048576) bad.push(f.name + " (lebih dari " + UPLOAD.maxMB + " MB)");
+        else if (f.size > (isImg(f) ? 15 * 1048576 : UPLOAD.maxKB * 1024)) bad.push(f.name + " (lebih dari " + (isImg(f) ? "15 MB" : UPLOAD.maxKB + " KB") + ")");
         else if (picked.length >= UPLOAD.maxFiles) bad.push(f.name + " (maksimal " + UPLOAD.maxFiles + " file)");
         else if (!picked.some((p) => p.name === f.name && p.size === f.size)) picked.push(f);
       }
@@ -240,18 +240,17 @@ function buka(id) {
       try {
         const files = [];
         for (let i = 0; i < picked.length; i++) {
-          const f = picked[i]; btn.textContent = `Mengunggah file ${i + 1} dari ${picked.length}...`;
-          const path = `jawaban/${user.uid}/${id}/${Date.now()}_${i}_${f.name.replace(/[^\w.\-]+/g, "_")}`;
-          const r = ref(storage, path);
-          await uploadBytes(r, f, { contentType: mimeOf(f) });
-          files.push({ nama: f.name, url: await getDownloadURL(r), path, ukuran: f.size, tipe: mimeOf(f) });
+          btn.textContent = `Memproses file ${i + 1} dari ${picked.length}...`;
+          const k = await kecilkan(picked[i]), fid = `${id}_${user.uid}_${Date.now()}_${i}`;
+          await setDoc(doc(db, "berkas", fid), { siswaId: user.uid, tugasId: id, nama: k.name, tipe: k.type, ukuran: k.size, data: await toB64(k.blob), createdAt: serverTimestamp() });
+          files.push({ id: fid, nama: k.name, ukuran: k.size, tipe: k.type });
         }
         btn.textContent = "Mengirim jawaban...";
         const d = { tugasId: id, tugasJudul: t.judul, siswaId: user.uid, siswaNama: profile.nama || "Siswa", mapelId: t.mapelId || "", kelasId: profile.kelasId || "", jawaban: jawab, link, files, status: "belum_diperiksa", nilai: null, feedback: "", createdAt: serverTimestamp() };
         await setDoc(doc(db, "submissions", id + "_" + user.uid), d);
         subs[id] = d; toast("Jawaban terkirim"); buka(id); views.beranda(); refreshDetail();
       } catch (er) {
-        alert("Gagal mengirim: " + er.message + (picked.length ? "\nPastikan storage.rules terbaru sudah di-Publish di Firebase Storage." : ""));
+        alert("Gagal mengirim: " + er.message + (picked.length ? "\nPastikan firestore.rules terbaru sudah di-Publish." : ""));
         btn.disabled = false; btn.textContent = "Kirim jawaban";
       }
     };
