@@ -69,7 +69,7 @@ dialog{border:0;border-radius:22px;max-width:580px;width:calc(100% - 32px);paddi
     <div class="sec"><h2>Mata pelajaran</h2></div><div class="grid gm" id="materiMini"></div></section>
   <section id="mapel" class="hide"><div class="ph"><div><h1>Mata pelajaran</h1><p>Pilih mata pelajaran untuk melihat materi, tugas, dan kuisnya.</p></div></div><div class="grid gm" id="mapelAll"></div></section>
   <section id="detail" class="hide"><button class="btn ghost sm" id="dBack" style="margin-bottom:16px">&larr; Semua mata pelajaran</button>
-    <div class="ph"><div><h1 id="dNama"></h1><p>Materi, tugas, dan kuis mata pelajaran ini.</p></div></div>
+    <div class="ph"><div><h1 id="dNama"></h1><p>Materi, tugas, dan kuis mata pelajaran ini.</p><div id="dGuru" style="margin-top:12px"></div></div></div>
     <style>#dTabs button{padding:8px 16px;font-size:.85rem}#dTabs button.on{background:var(--soft);color:var(--brand);border-color:var(--b2)}.opt{display:flex;align-items:center;gap:10px;padding:11px 14px;border:1px solid var(--line);border-radius:12px;cursor:pointer;margin:8px 0 0;font-size:.92rem;font-weight:500;color:var(--ink)}.opt input{width:auto;padding:0;accent-color:var(--brand);flex:none}.opt:has(input:checked){border-color:var(--brand);background:var(--soft)}</style>
     <div class="chips" id="dTabs" style="margin:0 0 20px"></div><div id="dIsi"></div></section>
   <section id="profil" class="hide"><div class="ph"><div><h1>Profil saya</h1><p>Lengkapi data diri dan pilih kelas Anda.</p></div></div>
@@ -143,11 +143,12 @@ const allMapel = () => { const l = [...mapelList]; if ([...materi, ...tugas, ...
 const inMapel = (arr, id) => arr.filter((x) => mid(x) === id);
 let curMapel = null, curTab = "materi";
 
+const guruRow = (m) => (!m.id ? "" : m.guru ? `<div class="guru"><span class="gav">${esc(m.guru[0].toUpperCase())}</span><span><small>Guru pengampu</small><b>${esc(m.guru)}</b></span></div>` : '<div class="guru none"><span class="gav">?</span><span><small>Guru pengampu</small><b>Belum ditentukan</b></span></div>');
 const mapelCard = (m) => {
   const M = inMapel(materi, m.id), T = inMapel(tugas, m.id), K = inMapel(kuis, m.id);
   const pending = [...T, ...K].filter((x) => !subs[x.id]).length;
   return `<div class="card mat" data-m="${esc(m.id)}" style="cursor:pointer"><div class="row"><div class="fi">${icon("book")}</div>${pending ? `<span class="tag warn">${pending} belum dikerjakan</span>` : '<span class="tag ok">Terkini</span>'}</div>
-    <div><h2>${esc(m.nama)}</h2></div><p class="mute sm">${M.length} materi · ${T.length} tugas · ${K.length} kuis</p></div>`;
+    <div><h2>${esc(m.nama)}</h2></div>${guruRow(m)}<p class="mute sm">${M.length} materi · ${T.length} tugas · ${K.length} kuis</p></div>`;
 };
 const bindMapel = (root) => document.querySelectorAll(root + " [data-m]").forEach((c) => (c.onclick = () => openMapel(c.dataset.m)));
 const kuisApi = async (aksi, data) => {
@@ -202,6 +203,7 @@ function renderDetail() {
   const m = allMapel().find((x) => x.id === curMapel) || { nama: "Umum" };
   const M = inMapel(materi, curMapel), T = inMapel(tugas, curMapel), K = inMapel(kuis, curMapel);
   $("#dNama").textContent = m.nama;
+  $("#dGuru").innerHTML = guruRow(m);
   $("#dTabs").innerHTML = [["materi", "Materi & modul", M.length], ["tugas", "Tugas", T.length], ["kuis", "Kuis", K.length]]
     .map(([k, l, n]) => `<button type="button" data-d="${k}" class="${curTab === k ? "on" : ""}">${l} (${n})</button>`).join("");
   document.querySelectorAll("#dTabs button").forEach((b) => (b.onclick = () => { curTab = b.dataset.d; renderDetail(); }));
