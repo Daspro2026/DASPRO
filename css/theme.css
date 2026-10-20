@@ -24,7 +24,6 @@ dialog[open]::backdrop{animation:fade .25s;backdrop-filter:blur(5px);background:
 
 /* ---------- APLIKASI (dashboard siswa & admin) ---------- */
 .app{background:radial-gradient(900px 380px at 88% -8%,color-mix(in srgb,var(--b2) 16%,transparent),transparent 70%)}
-body{background:var(--bg);color:var(--ink)}
 
 /* sidebar gelap */
 .app .side{background:linear-gradient(185deg,var(--nav1),var(--nav2));border-right:0;box-shadow:6px 0 30px -12px rgba(11,18,38,.45)}
