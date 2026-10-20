@@ -114,7 +114,7 @@ export function guard(needAdmin, tabs, views = {}) {
     const show = (id) => {
       document.querySelectorAll(".main > section").forEach((s) => s.classList.toggle("hide", s.id !== id));
       document.querySelectorAll(".side nav button").forEach((b) => b.classList.toggle("on", b.dataset.t === id));
-      window.scrollTo(0, 0); views[id]?.();
+      window.scrollTo(0, 0); document.querySelector(".main")?.scrollTo(0, 0); views[id]?.();
     };
     document.querySelectorAll(".side nav button").forEach((b) => (b.onclick = () => show(b.dataset.t)));
     document.body.classList.remove("hide");
