@@ -85,6 +85,19 @@ dialog{border:0;border-radius:22px;max-width:580px;width:calc(100% - 32px);paddi
     <div class="card"><h2>Daftar kelas</h2><ul class="list" id="kelDaftar" style="margin-top:8px"></ul></div>
   </div></section>
 
+<section id="daftar" class="hide"><div class="ph"><div><h1>Pendaftaran siswa</h1><p>Atur siapa yang boleh membuat akun: bebas, wajib kode kelas, atau perlu persetujuan guru.</p></div></div>
+  <style>.md{display:flex;gap:12px;align-items:flex-start;padding:14px;border:1.5px solid var(--line);border-radius:14px;margin:10px 0 0;cursor:pointer;text-transform:none;font-size:.95rem;letter-spacing:0;color:var(--ink);font-weight:500;transition:.2s}.md input{all:revert;margin:4px 0 0;accent-color:var(--brand)}.md b{display:block}.md small{display:block;color:var(--mute);font-size:.82rem;margin-top:2px}.md:has(input:checked){border-color:var(--b2);background:var(--soft)}.kd{font-family:ui-monospace,Menlo,monospace;font-weight:800;letter-spacing:.12em;background:var(--soft);color:var(--brand);padding:7px 11px;border-radius:10px}</style>
+  <div class="grid g2">
+    <div class="card"><h2>Mode pendaftaran</h2>
+      <label class="md"><input type="radio" name="md" value="terbuka"><span><b>Terbuka</b><small>Siapa saja yang tahu alamat web ini bisa mendaftar dan langsung masuk.</small></span></label>
+      <label class="md"><input type="radio" name="md" value="kode"><span><b>Wajib kode kelas</b><small>Siswa harus memasukkan kode kelas yang benar. Akun langsung aktif dan otomatis masuk ke kelas itu.</small></span></label>
+      <label class="md"><input type="radio" name="md" value="persetujuan"><span><b>Persetujuan guru</b><small>Akun baru menunggu disetujui guru. Siswa yang memakai kode kelas yang benar langsung aktif.</small></span></label>
+      <button class="btn full" id="mdSimpan" style="margin-top:16px">Simpan mode</button></div>
+    <div class="card"><h2>Kode kelas</h2><p class="mute sm" style="margin:6px 0 0">Bagikan kode ke siswa. Kode bisa diganti atau dinonaktifkan kapan saja; akun yang sudah dibuat tidak terpengaruh.</p><ul class="list" id="kodeList" style="margin-top:8px"></ul></div>
+  </div>
+  <div class="card" style="margin-top:18px"><div class="row" style="justify-content:space-between"><h2>Menunggu persetujuan <span class="tag warn" id="nTunggu">0</span></h2><button class="btn sm hide" id="setujuSemua">Setujui semua</button></div><ul class="list" id="tungguList" style="margin-top:8px"></ul></div>
+</section>
+
 <section id="konten" class="hide"><div class="ph"><div><h1>Materi &amp; tugas</h1><p>Tambahkan modul, materi, dan tugas. Tempel tautan dari mana saja (Google Drive, YouTube, Canva, Notion, website lain).</p></div></div>
   <div class="grid gk">
     <form class="card" id="form"><h2 id="cHead">Tambah konten baru</h2><div id="cInfo" class="mute sm hide" style="margin-bottom:6px"></div><label>Mata pelajaran</label><select id="tMapel"></select>
@@ -151,7 +164,7 @@ import { pasangGantiSandi } from "./js/reset.js";
 import { guard, esc, $, ago, icon, toast, applySettings, safeUrl, fileChips } from "./js/common.js";
 
 const views = {};
-const { show, user: akun, profile: akunProfil } = await guard(true, [["ringkasan", "Ringkasan", "grid"], ["mapel", "Mata pelajaran", "book"], ["kelas", "Kelas", "users"], ["konten", "Materi & Tugas", "upload"], ["periksa", "Periksa", "check"], ["kuis", "Kuis", "edit"], ["nilaiS", "Rekap nilai", "star"], ["setelan", "Pengaturan", "sliders"]], views);
+const { show, user: akun, profile: akunProfil } = await guard(true, [["ringkasan", "Ringkasan", "grid"], ["mapel", "Mata pelajaran", "book"], ["kelas", "Kelas", "users"], ["daftar", "Pendaftaran", "key"], ["konten", "Materi & Tugas", "upload"], ["periksa", "Periksa", "check"], ["kuis", "Kuis", "edit"], ["nilaiS", "Rekap nilai", "star"], ["setelan", "Pengaturan", "sliders"]], views);
 const all = async (c) => (await getDocs(collection(db, c))).docs.map((d) => ({ id: d.id, ...d.data() }));
 const kosong = (t) => `<div class="empty">${t}</div>`;
 $("#keP").onclick = () => show("periksa");
@@ -430,6 +443,58 @@ $("#kForm").onsubmit = async (e) => {
   } catch (er) { alert("Gagal menyimpan: " + er.message + "\nPastikan firestore.rules terbaru sudah di-Publish."); }
   $("#kSimpan").disabled = false;
 };
+
+/* Pendaftaran siswa */
+const bikinKode = () => { const a = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; return [...crypto.getRandomValues(new Uint8Array(8))].map((x) => a[x % a.length]).join(""); };
+async function badgeTunggu() {
+  try {
+    const n = (await getDocs(query(collection(db, "users"), where("status", "==", "menunggu")))).docs.length;
+    const b = document.querySelector('.side nav button[data-t="daftar"]'); b?.querySelector(".nb")?.remove();
+    if (n && b) b.insertAdjacentHTML("beforeend", `<span class="tag warn nb" style="margin-left:auto;padding:2px 8px">${n}</span>`);
+  } catch {}
+}
+const rulesHint = (er) => alert("Gagal: " + er.message + "\nPastikan firestore.rules terbaru sudah di-Publish.");
+views.daftar = async () => {
+  await loadKelas();
+  let mode = "terbuka";
+  try { const d = await getDoc(doc(db, "settings", "pendaftaran")); if (d.exists()) mode = d.data().mode || "terbuka"; } catch {}
+  document.querySelectorAll('input[name="md"]').forEach((r) => (r.checked = r.value === mode));
+  // --- kode kelas
+  const kodes = (await getDocs(collection(db, "kodeKelas"))).docs.map((d) => ({ id: d.id, ...d.data() }));
+  $("#kodeList").innerHTML = kelasAll.map((k) => { const c = kodes.find((x) => x.kelasId === k.id);
+    return `<li style="flex-wrap:wrap"><div class="row"><div class="fi">${icon("key")}</div><div><b>${esc(k.nama)}</b><div class="mute sm">${c ? (c.aktif ? "Kode aktif" : "Kode nonaktif") : "Belum ada kode"}</div></div></div>
+      <div class="row" style="gap:6px;flex-wrap:wrap">${c ? `<span class="kd">${esc(c.id)}</span><button class="btn ghost sm" data-salin="${esc(c.id)}">Salin</button><button class="btn ghost sm" data-tog="${esc(c.id)}">${c.aktif ? "Nonaktifkan" : "Aktifkan"}</button><button class="btn ghost sm" data-ganti="${k.id}" data-old="${esc(c.id)}">Ganti</button>` : `<button class="btn sm" data-buat="${k.id}">Buat kode</button>`}</div></li>`;
+  }).join("") || kosong("Buat kelas dulu di menu Kelas, lalu kembali ke sini.");
+  const kodeBaru = async (kelasId, old) => {
+    try { await setDoc(doc(db, "kodeKelas", bikinKode()), { kelasId, aktif: true, createdAt: serverTimestamp() }); if (old) await deleteDoc(doc(db, "kodeKelas", old)); toast("Kode dibuat"); views.daftar(); } catch (er) { rulesHint(er); }
+  };
+  document.querySelectorAll("#kodeList [data-buat]").forEach((b) => (b.onclick = () => kodeBaru(b.dataset.buat)));
+  document.querySelectorAll("#kodeList [data-ganti]").forEach((b) => (b.onclick = () => confirm("Kode lama akan berhenti berlaku. Lanjutkan?") && kodeBaru(b.dataset.ganti, b.dataset.old)));
+  document.querySelectorAll("#kodeList [data-tog]").forEach((b) => (b.onclick = async () => { try { await updateDoc(doc(db, "kodeKelas", b.dataset.tog), { aktif: !kodes.find((x) => x.id === b.dataset.tog).aktif }); views.daftar(); } catch (er) { rulesHint(er); } }));
+  document.querySelectorAll("#kodeList [data-salin]").forEach((b) => (b.onclick = () => navigator.clipboard?.writeText(b.dataset.salin).then(() => toast("Kode disalin"))));
+  // --- menunggu persetujuan (dan yang ditolak, agar bisa disetujui ulang)
+  const ambil = async (s) => (await getDocs(query(collection(db, "users"), where("status", "==", s)))).docs.map((d) => ({ id: d.id, ...d.data() }));
+  const tunggu = await ambil("menunggu"), tolak = await ambil("ditolak");
+  const urut = (a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0);
+  const baris = [...tunggu.sort(urut), ...tolak.sort(urut)];
+  $("#nTunggu").textContent = tunggu.length; $("#setujuSemua").classList.toggle("hide", tunggu.length < 2);
+  $("#tungguList").innerHTML = baris.map((u) => `<li style="flex-wrap:wrap"><div class="row"><div class="av">${esc((u.nama || "?")[0])}</div><div><b>${esc(u.nama || "-")}</b><div class="mute sm">${esc(u.email || "")} · ${ago(u.createdAt)}</div></div></div>
+    <div class="row" style="gap:8px;flex-wrap:wrap"><select data-k="${u.id}" style="width:auto;max-width:170px">${opt("", "Tanpa kelas")}${kelasAll.map((k) => opt(k.id, k.nama)).join("")}</select><button class="btn sm" data-ok="${u.id}">Setujui</button>${u.status === "menunggu" ? `<button class="btn ghost sm" data-no="${u.id}" style="color:var(--bad)">Tolak</button>` : `<span class="tag">Ditolak</span>`}</div></li>`).join("") || kosong("Tidak ada pendaftaran yang menunggu.");
+  document.querySelectorAll("#tungguList select").forEach((s) => (s.value = baris.find((u) => u.id === s.dataset.k)?.kelasId || ""));
+  const setuju = (id) => updateDoc(doc(db, "users", id), { status: "aktif", ...(document.querySelector(`#tungguList select[data-k="${id}"]`)?.value ? { kelasId: document.querySelector(`#tungguList select[data-k="${id}"]`).value } : {}) });
+  const selesai = (m) => { toast(m); views.daftar(); badgeTunggu(); };
+  document.querySelectorAll("#tungguList [data-ok]").forEach((b) => (b.onclick = async () => { try { await setuju(b.dataset.ok); selesai("Siswa disetujui"); } catch (er) { rulesHint(er); } }));
+  document.querySelectorAll("#tungguList [data-no]").forEach((b) => (b.onclick = async () => { if (!confirm("Tolak pendaftaran ini?")) return; try { await updateDoc(doc(db, "users", b.dataset.no), { status: "ditolak" }); selesai("Pendaftaran ditolak"); } catch (er) { rulesHint(er); } }));
+  $("#setujuSemua").onclick = async () => { if (!confirm("Setujui " + tunggu.length + " pendaftar?")) return; try { for (const u of tunggu) await setuju(u.id); selesai("Semua disetujui"); } catch (er) { rulesHint(er); } };
+};
+$("#mdSimpan").onclick = async () => {
+  const mode = document.querySelector('input[name="md"]:checked')?.value || "terbuka";
+  try {
+    if (mode === "kode" && !(await getDocs(collection(db, "kodeKelas"))).docs.some((d) => d.data().aktif) && !confirm("Belum ada kode kelas yang aktif, jadi siswa baru belum bisa mendaftar. Tetap simpan?")) return;
+    await setDoc(doc(db, "settings", "pendaftaran"), { mode, updatedAt: serverTimestamp() }); toast("Mode pendaftaran disimpan");
+  } catch (er) { rulesHint(er); }
+};
+badgeTunggu();
 
 /* Pengaturan */
 $("#aEmail").textContent = akun?.email || akunProfil?.email || "-"; pasangGantiSandi($("#gantiSandi"), akun?.email || akunProfil?.email, toast);
