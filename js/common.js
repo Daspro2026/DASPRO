@@ -6,7 +6,7 @@ export const safeUrl = (u = "") => (/^https?:\/\//i.test(u) ? esc(u) : "#");
 export const fdate = (s) => (s ? new Date(s).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }) : "");
 export const ago = (t) => { const d = Math.floor((Date.now() / 1000 - (t?.seconds || 0)) / 86400); return d <= 0 ? "Hari ini" : d + " hari lalu"; };
 
-const P = { home: "M3 11l9-8 9 8M5 10v10h14V10", book: "M4 19.5A2.5 2.5 0 016.5 17H20V3H6.5A2.5 2.5 0 004 5.5zM4 19.5V21h16", task: "M9 11l3 3 8-8M20 12v7a2 2 0 01-2 2H6a2 2 0 01-2-2V5a2 2 0 012-2h9", star: "M12 2l3 6.9 7.5.7-5.7 5 1.7 7.4L12 18l-6.5 4 1.7-7.4-5.7-5 7.5-.7z", upload: "M12 16V4M7 9l5-5 5 5M4 20h16", check: "M5 13l4 4L19 7", out: "M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9", users: "M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.9M16 3.1a4 4 0 010 7.8", clock: "M12 22a10 10 0 100-20 10 10 0 000 20zM12 6v6l4 2", file: "M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8zM14 2v6h6", grid: "M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z", download: "M12 4v12M7 11l5 5 5-5M4 20h16", trash: "M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6", sliders: "M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6", edit: "M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z" };
+const P = { key: "M21 2l-2 2m-7.6 7.6a5.5 5.5 0 11-7.8 7.8 5.5 5.5 0 017.8-7.8zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4", home: "M3 11l9-8 9 8M5 10v10h14V10", book: "M4 19.5A2.5 2.5 0 016.5 17H20V3H6.5A2.5 2.5 0 004 5.5zM4 19.5V21h16", task: "M9 11l3 3 8-8M20 12v7a2 2 0 01-2 2H6a2 2 0 01-2-2V5a2 2 0 012-2h9", star: "M12 2l3 6.9 7.5.7-5.7 5 1.7 7.4L12 18l-6.5 4 1.7-7.4-5.7-5 7.5-.7z", upload: "M12 16V4M7 9l5-5 5 5M4 20h16", check: "M5 13l4 4L19 7", out: "M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9", users: "M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.9M16 3.1a4 4 0 010 7.8", clock: "M12 22a10 10 0 100-20 10 10 0 000 20zM12 6v6l4 2", file: "M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8zM14 2v6h6", grid: "M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z", download: "M12 4v12M7 11l5 5 5-5M4 20h16", trash: "M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6", sliders: "M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6", edit: "M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z" };
 export const icon = (n) => `<svg class="i" viewBox="0 0 24 24"><path d="${P[n] || ""}"/></svg>`;
 const fill = () => document.querySelectorAll("[data-ic]:empty").forEach((e) => (e.innerHTML = icon(e.dataset.ic)));
 new MutationObserver(fill).observe(document.documentElement, { childList: true, subtree: true });
@@ -94,6 +94,15 @@ export function guard(needAdmin, tabs, views = {}) {
   return new Promise((resolve) => onAuthStateChanged(auth, async (user) => {
     if (!user) return (location.href = "login.html");
     const profile = (await getDoc(doc(db, "users", user.uid))).data() || {};
+    // Siswa yang belum disetujui guru / ditolak hanya melihat halaman status ini
+    if (profile.role !== "admin" && (profile.status === "menunggu" || profile.status === "ditolak")) {
+      const w = profile.status === "menunggu";
+      document.body.classList.remove("hide");
+      document.body.innerHTML = `<div style="min-height:100vh;display:grid;place-items:center;padding:20px"><div class="card" style="max-width:440px;text-align:center;padding:32px"><h1>${w ? "Menunggu persetujuan guru" : "Pendaftaran ditolak"}</h1><p class="mute" style="margin:12px 0 22px;line-height:1.6">${w ? "Akun Anda sudah dibuat. Anda bisa mulai belajar setelah guru menyetujui pendaftaran ini. Coba periksa lagi nanti." : "Guru tidak menyetujui pendaftaran ini. Hubungi guru Anda jika merasa ini keliru."}</p><button class="btn full" id="cekLagi">Periksa lagi</button><button class="btn ghost full" id="keluarW" style="margin-top:8px">Keluar</button></div></div>`;
+      $("#cekLagi").onclick = () => location.reload();
+      $("#keluarW").onclick = () => signOut(auth).then(() => (location.href = "login.html"));
+      return;
+    }
     if (needAdmin && profile.role !== "admin") return (location.href = "dashboard.html");
     const nama = profile.nama || user.email || "Pengguna";
     const out = () => signOut(auth).then(() => (location.href = "login.html"));
