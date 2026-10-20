@@ -149,6 +149,12 @@ dialog{border:0;border-radius:22px;max-width:580px;width:calc(100% - 32px);paddi
     <div class="card"><h2>Kuis Anda</h2><ul class="list" id="kDaftar" style="margin-top:8px"></ul></div>
   </div></section>
 
+<section id="analitik" class="hide"><div class="ph"><div><h1>Analitik</h1><p>Pantau siapa yang belum mengumpulkan, rata-rata kelas, soal tersulit, dan perkembangan siswa.</p></div></div>
+  <style>#aTabs button{padding:8px 16px;font-size:.85rem}#aTabs button.on{background:var(--soft);color:var(--brand);border-color:var(--b2)}</style>
+  <div class="chips" id="aTabs" style="margin:0 0 18px"></div>
+  <div id="aPanel"></div>
+  <p class="mute sm" style="margin-top:14px">Data dibaca hanya saat Anda menekan tombol, supaya kuota gratis Firebase hemat.</p></section>
+
 <section id="setelan" class="hide"><div class="ph"><div><h1>Pengaturan tampilan</h1><p>Ubah nama, warna, logo, dan teks halaman depan. Perubahan langsung terlihat di sini; klik Simpan agar berlaku untuk semua orang.</p></div></div>
   <style>.sw{display:flex;gap:10px;flex-wrap:wrap}.sw button{width:34px;height:34px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 1px var(--line);cursor:pointer}.sw button:hover{transform:scale(1.1)}#lp{width:64px;height:64px;border-radius:16px;background:var(--bg);border:1px solid var(--line);display:grid;place-items:center;overflow:hidden;font-size:.7rem;color:var(--mute);text-align:center;flex:none}#lp img{width:100%;height:100%;object-fit:cover}</style>
   <div class="grid g2">
@@ -173,7 +179,7 @@ import { pasangGantiSandi } from "./js/reset.js";
 import { guard, esc, $, ago, icon, toast, applySettings, safeUrl, fileChips } from "./js/common.js";
 
 const views = {};
-const { show, user: akun, profile: akunProfil } = await guard(true, [["ringkasan", "Ringkasan", "grid"], ["mapel", "Mata pelajaran", "book"], ["kelas", "Kelas", "users"], ["daftar", "Pendaftaran", "key"], ["konten", "Materi & Tugas", "upload"], ["periksa", "Periksa", "check"], ["kuis", "Kuis", "edit"], ["nilaiS", "Rekap nilai", "star"], ["setelan", "Pengaturan", "sliders"]], views);
+const { show, user: akun, profile: akunProfil } = await guard(true, [["ringkasan", "Ringkasan", "grid"], ["mapel", "Mata pelajaran", "book"], ["kelas", "Kelas", "users"], ["daftar", "Pendaftaran", "key"], ["konten", "Materi & Tugas", "upload"], ["periksa", "Periksa", "check"], ["kuis", "Kuis", "edit"], ["nilaiS", "Rekap nilai", "star"], ["analitik", "Analitik", "chart"], ["setelan", "Pengaturan", "sliders"]], views);
 const all = async (c) => (await getDocs(collection(db, c))).docs.map((d) => ({ id: d.id, ...d.data() }));
 const kosong = (t) => `<div class="empty">${t}</div>`;
 $("#keP").onclick = () => show("periksa");
@@ -483,6 +489,133 @@ $("#kForm").onsubmit = async (e) => {
     await bump(); keluarEdit(); toast(diEdit ? "Perubahan kuis tersimpan" : "Kuis tersimpan"); views.kuis();
   } catch (er) { alert("Gagal menyimpan: " + er.message + "\nPastikan firestore.rules terbaru sudah di-Publish."); }
   $("#kSimpan").disabled = false;
+};
+
+/* Analitik */
+let siswaCache = null, aTab = "belum";
+const daftarSiswa = async () => {
+  if (!siswaCache || Date.now() - siswaCache.t > 6e5) {
+    const rows = (await getDocs(query(collection(db, "users"), where("role", "==", "siswa")))).docs.map((d) => { const u = d.data(); return { id: d.id, nama: u.nama || u.email || "-", kelasId: u.kelasId || "", nis: u.nis || "", status: u.status || "aktif" }; });
+    siswaCache = { t: Date.now(), rows };
+  }
+  return siswaCache.rows;
+};
+const ambilSelesai = async () => {
+  if (!rekapCache || Date.now() - rekapCache.t > 3e5) rekapCache = { t: Date.now(), rows: (await getDocs(query(collection(db, "submissions"), where("status", "==", "selesai")))).docs.map((d) => ({ id: d.id, ...d.data() })) };
+  return rekapCache.rows;
+};
+const kelasOpts = () => opt("*", "Semua kelas") + opt("", "Tanpa kelas") + kelasAll.map((k) => opt(k.id, k.nama)).join("");
+const bar = (v, label, sub, warna) => `<div style="margin:14px 0"><div class="row" style="justify-content:space-between;gap:12px;align-items:flex-end"><b>${label}</b><span class="mute sm" style="text-align:right">${sub}</span></div>
+  <div style="height:12px;background:var(--soft);border-radius:99px;overflow:hidden;margin-top:6px"><div style="height:100%;width:${Math.max(2, Math.min(100, v))}%;background:${warna || "linear-gradient(90deg,var(--brand),var(--b2))"};border-radius:99px"></div></div></div>`;
+const tglPendek = (sec) => (sec ? new Date(sec * 1000).toLocaleDateString("id-ID", { day: "numeric", month: "short" }) : "-");
+const hint = (t) => `<p class="mute sm">${t}</p>`;
+const panel = {};
+
+views.analitik = async () => {
+  await Promise.all([loadMapel(), loadKelas()]);
+  $("#aTabs").innerHTML = [["belum", "Belum mengumpulkan"], ["kelas", "Rata-rata kelas"], ["soal", "Soal sering salah"], ["siswa", "Perkembangan siswa"]]
+    .map(([k, l]) => `<button type="button" data-a="${k}" class="${aTab === k ? "on" : ""}">${l}</button>`).join("");
+  document.querySelectorAll("#aTabs button").forEach((b) => (b.onclick = () => { aTab = b.dataset.a; views.analitik(); }));
+  try { await panel[aTab](); } catch (er) { $("#aPanel").innerHTML = `<div class="card">${kosong("Gagal memuat: " + esc(er.message))}</div>`; }
+};
+
+/* 1. Siapa yang belum mengumpulkan */
+panel.belum = async () => {
+  const [tg, ks] = await Promise.all([all("tugas"), all("kuis")]);
+  $("#aPanel").innerHTML = `<div class="card"><div class="row" style="gap:10px;flex-wrap:wrap"><select id="anItem" style="width:auto;max-width:320px">${tg.map((t) => opt("t:" + t.id, "Tugas: " + t.judul)).join("")}${ks.map((k) => opt("k:" + k.id, "Kuis: " + k.judul)).join("")}</select>
+    <select id="anKelasB" style="width:auto">${kelasOpts()}</select><button class="btn" id="anGo">Tampilkan</button></div>
+    <div id="anOut" style="margin-top:18px">${tg.length || ks.length ? hint("Pilih tugas atau kuis, lalu klik Tampilkan.") : kosong("Belum ada tugas atau kuis.")}</div></div>`;
+  $("#anGo").onclick = async () => {
+    if (!$("#anItem").value) return;
+    const itemId = $("#anItem").value.slice(2), f = $("#anKelasB").value;
+    $("#anOut").innerHTML = kosong("Memuat...");
+    const [subs, siswa] = await Promise.all([getDocs(query(collection(db, "submissions"), where("tugasId", "==", itemId))), daftarSiswa()]);
+    const sudah = new Set(subs.docs.map((d) => d.data().siswaId));
+    const target = siswa.filter((u) => u.status === "aktif" && (f === "*" || kOf(u.kelasId) === f));
+    const belum = target.filter((u) => !sudah.has(u.id)).sort((a, b) => kelasNama(kOf(a.kelasId)).localeCompare(kelasNama(kOf(b.kelasId))) || a.nama.localeCompare(b.nama));
+    const done = target.length - belum.length;
+    $("#anOut").innerHTML = `<p><b>${belum.length}</b> dari ${target.length} siswa belum mengumpulkan.</p>${bar(target.length ? Math.round((done / target.length) * 100) : 0, "Sudah mengumpulkan", done + " dari " + target.length + " siswa")}
+      ${belum.length ? `<button class="btn ghost sm" id="anSalin">Salin daftar nama</button><ul class="list" style="margin-top:8px">${belum.map((u) => `<li><div class="row"><div class="av">${esc(u.nama[0] || "?")}</div><div><b>${esc(u.nama)}</b>${u.nis ? `<div class="mute sm">NIS ${esc(u.nis)}</div>` : ""}</div></div><span class="tag">${esc(kelasNama(kOf(u.kelasId)))}</span></li>`).join("")}</ul>` : kosong("Semua siswa sudah mengumpulkan.")}`;
+    if ($("#anSalin")) $("#anSalin").onclick = () => navigator.clipboard?.writeText(belum.map((u) => u.nama + " (" + kelasNama(kOf(u.kelasId)) + ")").join("\n")).then(() => toast("Daftar disalin"));
+  };
+};
+
+/* 2. Rata-rata per kelas */
+panel.kelas = async () => {
+  $("#aPanel").innerHTML = `<div class="card"><div class="row" style="gap:10px;flex-wrap:wrap"><select id="anMp" style="width:auto">${opt("*", "Semua mata pelajaran") + opt("", "Umum") + mapelAll.map((m) => opt(m.id, m.nama)).join("")}</select>
+    <select id="anJn" style="width:auto"><option value="*">Kuis &amp; tugas</option><option value="kuis">Hanya kuis</option><option value="tugas">Hanya tugas</option></select><button class="btn" id="anGoK">Tampilkan rata-rata</button></div>
+    <div id="anOutK" style="margin-top:18px">${hint("Klik Tampilkan. Semua nilai yang sudah masuk dibaca sekali dan disimpan 5 menit.")}</div></div>`;
+  $("#anGoK").onclick = async () => {
+    $("#anOutK").innerHTML = kosong("Memuat...");
+    const rows = await ambilSelesai(), src = {};
+    (await Promise.all([all("tugas"), all("kuis")])).flat().forEach((x) => (src[x.id] = x.mapelId || ""));
+    const mp = $("#anMp").value, jn = $("#anJn").value, g = {};
+    const data = rows.filter((x) => (mp === "*" || mOf(x.mapelId || src[x.tugasId] || "") === mp) && (jn === "*" || (x.jenis === "kuis") === (jn === "kuis")));
+    data.forEach((x) => { const o = (g[kOf(x.kelasId)] ??= { n: 0, s: 0, min: 101, max: -1 }), v = Number(x.nilai) || 0; o.n++; o.s += v; o.min = Math.min(o.min, v); o.max = Math.max(o.max, v); });
+    const urut = Object.entries(g).map(([k, o]) => ({ nama: kelasNama(k), ...o, avg: o.s / o.n })).sort((a, b) => b.avg - a.avg);
+    const total = data.length ? Math.round(data.reduce((a, x) => a + (Number(x.nilai) || 0), 0) / data.length) : 0;
+    $("#anOutK").innerHTML = urut.length ? `<p class="mute sm">${data.length} hasil · rata-rata keseluruhan <b>${total}</b></p>` + urut.map((o) => bar(o.avg, esc(o.nama), `rata-rata <b>${o.avg.toFixed(1)}</b> · ${o.n} hasil · terendah ${o.min} · tertinggi ${o.max}`)).join("") : kosong("Belum ada nilai untuk saringan ini.");
+  };
+};
+
+/* 3. Soal kuis yang paling sering salah */
+panel.soal = async () => {
+  const ks = (await all("kuis")).sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+  $("#aPanel").innerHTML = `<div class="card"><div class="row" style="gap:10px;flex-wrap:wrap"><select id="anKuis" style="width:auto;max-width:340px">${ks.map((k) => opt(k.id, k.judul)).join("")}</select><button class="btn" id="anGoS">Analisis soal</button></div>
+    <div id="anOutS" style="margin-top:18px">${ks.length ? hint("Pilih kuis, lalu klik Analisis soal.") : kosong("Belum ada kuis.")}</div></div>`;
+  $("#anGoS").onclick = async () => {
+    const kuis = ks.find((k) => k.id === $("#anKuis").value); if (!kuis) return;
+    $("#anOutS").innerHTML = kosong("Memuat...");
+    const subs = (await getDocs(query(collection(db, "submissions"), where("tugasId", "==", kuis.id)))).docs.map((d) => d.data());
+    const stat = {}; (kuis.soal || []).forEach((q, i) => { if ((q.tipe || "pg") !== "esai") stat[q.id] = { q, no: i + 1, n: 0, salah: 0, jw: {} }; });
+    let dipakai = 0;
+    subs.forEach((s) => {
+      if (!s.detail) return; dipakai++;
+      for (const [id, v] of Object.entries(s.detail)) {
+        const t = stat[id]; if (!t || v.ok === null || v.ok === undefined) continue;
+        t.n++; if (!v.ok) { t.salah++; const j = v.j || "(tidak dijawab)"; t.jw[j] = (t.jw[j] || 0) + 1; }
+      }
+    });
+    const urut = Object.values(stat).filter((t) => t.n).sort((a, b) => b.salah / b.n - a.salah / a.n);
+    $("#anOutS").innerHTML = !dipakai ? kosong("Belum ada hasil dengan rincian soal. Rincian hanya tersimpan untuk kuis yang dikerjakan setelah fitur kuis serius dipasang.")
+      : `<p class="mute sm">Dari ${dipakai} siswa. Soal diurutkan dari yang paling banyak salah.</p>` + urut.map((t) => {
+        const p = Math.round((t.salah / t.n) * 100), top = Object.entries(t.jw).sort((a, b) => b[1] - a[1])[0];
+        return `<div style="margin:16px 0;padding-top:14px;border-top:1px solid var(--line)"><div class="row" style="justify-content:space-between;gap:10px"><b>Soal ${t.no}</b><span class="tag ${p >= 50 ? "warn" : "ok"}">${p}% salah</span></div>
+          <p style="margin:6px 0">${esc(t.q.teks)}</p>${bar(p, "", `${t.salah} dari ${t.n} salah`, p >= 50 ? "var(--bad)" : "")}
+          ${top ? `<p class="mute sm">Jawaban salah terbanyak: <b>${esc(top[0])}</b> (${top[1]} siswa)</p>` : ""}</div>`;
+      }).join("");
+  };
+};
+
+/* 4. Grafik perkembangan tiap siswa */
+const grafik = (pts) => {
+  const W = 640, H = 250, L = 36, R = 14, T = 14, B = 30, n = pts.length;
+  const x = (i) => L + (n === 1 ? (W - L - R) / 2 : (i * (W - L - R)) / (n - 1)), y = (v) => T + (H - T - B) * (1 - v / 100);
+  const rata = pts.reduce((a, p) => a + p.y, 0) / n;
+  const grid = [0, 25, 50, 75, 100].map((v) => `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" style="stroke:var(--line)"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end" font-size="10" style="fill:var(--mute)">${v}</text>`).join("");
+  const garis = n > 1 ? `<polyline fill="none" stroke-width="2.5" stroke-linejoin="round" style="stroke:var(--brand)" points="${pts.map((p, i) => `${x(i)},${y(p.y)}`).join(" ")}"/>` : "";
+  const titik = pts.map((p, i) => `<circle cx="${x(i)}" cy="${y(p.y)}" r="5" stroke-width="2.5" style="fill:#fff;stroke:var(--brand)"><title>${esc(p.t)} · nilai ${p.y} · ${esc(p.d)}</title></circle>${n <= 14 ? `<text x="${x(i)}" y="${H - 10}" text-anchor="middle" font-size="10" style="fill:var(--mute)">${i + 1}</text>` : ""}`).join("");
+  return `<div style="overflow-x:auto"><svg viewBox="0 0 ${W} ${H}" style="min-width:440px;width:100%;height:auto">${grid}<line x1="${L}" x2="${W - R}" y1="${y(rata)}" y2="${y(rata)}" stroke-dasharray="5 4" style="stroke:var(--b2)"/>${garis}${titik}</svg></div>`;
+};
+panel.siswa = async () => {
+  const siswa = await daftarSiswa();
+  $("#aPanel").innerHTML = `<div class="card"><div class="row" style="gap:10px;flex-wrap:wrap"><select id="anKs" style="width:auto">${kelasOpts()}</select><select id="anSw" style="width:auto;max-width:300px"></select></div>
+    <div id="anSOut" style="margin-top:18px">${hint("Pilih kelas dan siswa untuk melihat grafik nilainya.")}</div></div>`;
+  const isi = () => { const f = $("#anKs").value; $("#anSw").innerHTML = opt("", "— Pilih siswa —") + siswa.filter((u) => f === "*" || kOf(u.kelasId) === f).sort((a, b) => a.nama.localeCompare(b.nama)).map((u) => opt(u.id, u.nama)).join(""); };
+  $("#anKs").onchange = isi; isi();
+  $("#anSw").onchange = async () => {
+    const id = $("#anSw").value; if (!id) return;
+    $("#anSOut").innerHTML = kosong("Memuat...");
+    const rows = (await getDocs(query(collection(db, "submissions"), where("siswaId", "==", id)))).docs.map((d) => d.data()).filter((x) => x.status === "selesai" && x.nilai !== null && x.nilai !== undefined)
+      .map((x) => { const sec = (x.updatedAt || x.createdAt)?.seconds || 0; return { y: Number(x.nilai) || 0, t: x.tugasJudul || "-", d: tglPendek(sec), sec, m: mapelNama(mOf(x.mapelId || "")) }; }).sort((a, b) => a.sec - b.sec);
+    if (!rows.length) { $("#anSOut").innerHTML = kosong("Siswa ini belum punya nilai."); return; }
+    const avg = (a) => a.reduce((s, p) => s + p.y, 0) / a.length, n = rows.length, h = Math.floor(n / 2);
+    const tren = n >= 4 ? avg(rows.slice(n - h)) - avg(rows.slice(0, h)) : null;
+    const trenTag = tren === null ? "" : Math.abs(tren) < 3 ? '<span class="tag">Stabil</span>' : tren > 0 ? `<span class="tag ok">Naik +${Math.round(tren)}</span>` : `<span class="tag warn">Turun ${Math.round(tren)}</span>`;
+    $("#anSOut").innerHTML = `<div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:10px"><span class="tag">Rata-rata ${avg(rows).toFixed(1)}</span><span class="tag ok">Tertinggi ${Math.max(...rows.map((p) => p.y))}</span><span class="tag warn">Terendah ${Math.min(...rows.map((p) => p.y))}</span><span class="tag">${n} nilai</span>${trenTag}</div>
+      ${grafik(rows)}<p class="mute sm">Garis putus-putus = rata-rata siswa. Arahkan kursor ke titik untuk melihat detail.</p>
+      <div style="overflow-x:auto;margin-top:10px"><table><tr><th>#</th><th>Tugas / kuis</th><th>Mapel</th><th>Nilai</th><th>Tanggal</th></tr>${rows.map((p, i) => `<tr><td>${i + 1}</td><td><b>${esc(p.t)}</b></td><td>${esc(p.m)}</td><td><span class="tag ok">${p.y}</span></td><td class="mute">${esc(p.d)}</td></tr>`).join("")}</table></div>`;
+  };
 };
 
 /* Pendaftaran siswa */
