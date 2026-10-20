@@ -5,31 +5,54 @@ service cloud.firestore {
     function isAdmin() {
       return signedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
+    // Akun aktif = bukan siswa yang masih menunggu / ditolak. Akun lama (tanpa field status) dianggap aktif.
+    function aktif() {
+      return signedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('status', 'aktif') == 'aktif';
+    }
+    // Mode pendaftaran yang dipilih guru: terbuka | kode | persetujuan (default: terbuka)
+    function modeDaftar() {
+      return exists(/databases/$(database)/documents/settings/pendaftaran)
+        ? get(/databases/$(database)/documents/settings/pendaftaran).data.get('mode', 'terbuka') : 'terbuka';
+    }
+    // Kode kelas valid: ada, aktif, dan kelasId pada akun sama dengan kelas milik kode itu
+    function kodeOk(d) {
+      return 'kode' in d && d.kode is string
+        && exists(/databases/$(database)/documents/kodeKelas/$(d.kode))
+        && get(/databases/$(database)/documents/kodeKelas/$(d.kode)).data.aktif == true
+        && get(/databases/$(database)/documents/kodeKelas/$(d.kode)).data.kelasId == d.get('kelasId', '');
+    }
     match /users/{uid} {
       allow read: if signedIn() && (request.auth.uid == uid || isAdmin());
-      allow create: if signedIn() && request.auth.uid == uid && request.resource.data.role == 'siswa';
+      allow create: if signedIn() && request.auth.uid == uid && request.resource.data.role == 'siswa' && (
+        (modeDaftar() == 'terbuka' && request.resource.data.get('status', 'aktif') == 'aktif')
+        || (modeDaftar() == 'persetujuan' && (request.resource.data.get('status', '') == 'menunggu'
+              || (request.resource.data.get('status', '') == 'aktif' && kodeOk(request.resource.data))))
+        || (modeDaftar() == 'kode' && request.resource.data.get('status', '') == 'aktif' && kodeOk(request.resource.data))
+      );
       allow update: if isAdmin() || (signedIn() && request.auth.uid == uid
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nama','kelasId','nis','deskripsi','foto']));
       allow delete: if isAdmin();
     }
-    match /kelas/{id}  { allow read: if signedIn(); allow write: if isAdmin(); }
+    // Kode kelas: siapa pun boleh MENGECEK satu kode yang ia tahu (get), tetapi tidak boleh melihat daftarnya.
+    match /kodeKelas/{kode} { allow get: if true; allow list, write: if isAdmin(); }
+    match /kelas/{id}  { allow read: if aktif(); allow write: if isAdmin(); }
     match /settings/{id} { allow read: if true; allow write: if isAdmin(); }
-    match /mapel/{id}  { allow read: if signedIn(); allow write: if isAdmin(); }
-    match /meta/{id}   { allow read: if signedIn(); allow write: if isAdmin(); }
-    match /materi/{id} { allow read: if signedIn(); allow write: if isAdmin(); }
-    match /tugas/{id}  { allow read: if signedIn(); allow write: if isAdmin(); }
-    match /kuis/{id}   { allow read: if signedIn(); allow write: if isAdmin(); }
+    match /mapel/{id}  { allow read: if aktif(); allow write: if isAdmin(); }
+    match /meta/{id}   { allow read: if aktif(); allow write: if isAdmin(); }
+    match /materi/{id} { allow read: if aktif(); allow write: if isAdmin(); }
+    match /tugas/{id}  { allow read: if aktif(); allow write: if isAdmin(); }
+    match /kuis/{id}   { allow read: if aktif(); allow write: if isAdmin(); }
     // Kunci jawaban: HANYA admin. Siswa tidak bisa membaca sama sekali.
     match /kunci/{id}  { allow read, write: if isAdmin(); }
     // File jawaban siswa (maks ~700 KB, disimpan sebagai teks base64). Hanya pemilik & guru yang boleh membaca.
     match /berkas/{id} {
-      allow create: if signedIn() && request.resource.data.siswaId == request.auth.uid
+      allow create: if aktif() && request.resource.data.siswaId == request.auth.uid
                     && request.resource.data.data is string && request.resource.data.data.size() < 980000;
       allow read: if isAdmin() || (signedIn() && resource.data.siswaId == request.auth.uid);
       allow delete: if isAdmin();
     }
     match /submissions/{id} {
-      allow create: if signedIn() && request.resource.data.siswaId == request.auth.uid
+      allow create: if aktif() && request.resource.data.siswaId == request.auth.uid
                     && request.resource.data.status == 'belum_diperiksa'
                     && request.resource.data.nilai == null;
       allow read: if isAdmin() || (signedIn() && resource.data.siswaId == request.auth.uid);
