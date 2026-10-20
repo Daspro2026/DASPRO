@@ -127,12 +127,21 @@ dialog{border:0;border-radius:22px;max-width:580px;width:calc(100% - 32px);paddi
 <section id="nilaiS" class="hide"><div class="ph"><div><h1>Rekap nilai</h1><p>Semua jawaban yang sudah dinilai.</p></div>
   <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><select id="rKelas" style="width:auto;max-width:200px"></select><select id="rJenis" style="width:auto;max-width:200px"><option value="*">Kuis &amp; tugas</option><option value="kuis">Hanya kuis</option><option value="tugas">Hanya tugas</option></select><select id="rMapel" style="width:auto;max-width:200px"></select><button class="btn ghost" id="csv">Unduh CSV</button></div></div><div class="card" style="overflow-x:auto" id="rekap"></div></section>
 
-<section id="kuis" class="hide"><div class="ph"><div><h1>Kuis</h1><p>Buat soal pilihan ganda. Kunci jawaban hanya bisa dilihat guru, dan nilai siswa dihitung otomatis.</p></div></div>
+<section id="kuis" class="hide"><div class="ph"><div><h1>Kuis</h1><p>Buat soal pilihan ganda, isian singkat, dan esai. Kunci jawaban hanya bisa dilihat guru; nilai pilihan ganda dan isian dihitung otomatis.</p></div></div>
   <style>.qrad{width:auto!important;padding:0!important;accent-color:var(--brand);flex:none}</style>
   <div class="grid gk">
     <form class="card" id="kForm"><h2 id="kHead">Buat kuis baru</h2><div id="kEditInfo" class="mute sm hide" style="margin-bottom:6px"></div><label>Mata pelajaran</label><select id="kMapel"></select>
       <label>Judul kuis</label><input id="kJudul" required placeholder="Contoh: Kuis Algoritma Bab 1">
       <label>Deskripsi (opsional)</label><input id="kDesk">
+      <div class="grid" style="grid-template-columns:1fr 1fr;gap:12px;margin-top:4px">
+        <div><label>Batas waktu (menit, 0 = tanpa batas)</label><input id="kDurasi" type="number" min="0" value="0"></div>
+        <div><label>Maks. percobaan</label><input id="kMaks" type="number" min="1" value="1"></div>
+        <div><label>Dibuka (opsional)</label><input id="kBuka" type="datetime-local"></div>
+        <div><label>Ditutup (opsional)</label><input id="kTutup" type="datetime-local"></div>
+      </div>
+      <label style="display:flex;gap:8px;align-items:center;color:var(--ink)"><input type="checkbox" id="kAcak" style="width:auto"> Acak urutan soal</label>
+      <label style="display:flex;gap:8px;align-items:center;color:var(--ink);margin-top:8px"><input type="checkbox" id="kAcakOpsi" style="width:auto"> Acak urutan pilihan jawaban</label>
+      <label>Pembahasan untuk siswa</label><select id="kBhs"><option value="tidak">Tidak ditampilkan</option><option value="selesai">Langsung setelah selesai</option><option value="tutup">Setelah kuis ditutup</option></select>
       <div id="soalBox"></div>
       <button type="button" class="btn ghost full" id="tambahSoal">+ Tambah soal</button>
       <button class="btn full" id="kSimpan">Simpan kuis</button>
@@ -317,6 +326,7 @@ $("#form").onsubmit = async (e) => {
 
 /* Periksa */
 let queue = [], idx = 0;
+const ringkasKuis = (c) => c.jenis === "kuis" ? `Kuis dengan soal esai. Nilai otomatis (pilihan ganda & isian): ${c.nilaiOtomatis ?? "-"}\n\n` + Object.values(c.detail || {}).filter((d) => d.tipe === "esai").map((d, i) => `Esai ${i + 1}: ${d.t}\nJawaban: ${d.j || "(kosong)"}`).join("\n\n") : null;
 const FB = ["Bagus sekali.", "Sudah baik, lengkapi analisisnya.", "Perlu diperbaiki.", "Jawaban belum sesuai instruksi."];
 $("#chips").innerHTML = FB.map((t) => `<button type="button">${t}</button>`).join("");
 $("#cn").innerHTML = [60, 70, 80, 90, 100].map((n) => `<button type="button">${n}</button>`).join("");
@@ -331,9 +341,9 @@ function tampil() {
   $("#kosong").classList.toggle("hide", !!c); $("#panel").classList.toggle("hide", !c);
   $("#sisa").textContent = c ? `Sisa ${queue.length} jawaban untuk diperiksa` : "";
   if (!c) return;
-  $("#pAv").textContent = c.siswaNama[0]; $("#pSiswa").textContent = c.siswaNama; $("#pTugas").textContent = c.tugasJudul; $("#pJawab").textContent = typeof c.jawaban === "string" && c.jawaban ? c.jawaban : "(Siswa tidak menulis jawaban teks)"; $("#pFiles").innerHTML = fileChips(c.files);
+  $("#pAv").textContent = c.siswaNama[0]; $("#pSiswa").textContent = c.siswaNama; $("#pTugas").textContent = c.tugasJudul; $("#pJawab").textContent = ringkasKuis(c) || (typeof c.jawaban === "string" && c.jawaban ? c.jawaban : "(Siswa tidak menulis jawaban teks)"); $("#pFiles").innerHTML = fileChips(c.files);
   const l = $("#pLink"); l.classList.toggle("hide", !/^https?:\/\//i.test(c.link || "")); l.href = c.link || "#";
-  $("#nilai").value = ""; $("#fb").value = "";
+  $("#nilai").value = c.jenis === "kuis" && c.nilaiOtomatis != null ? c.nilaiOtomatis : ""; $("#fb").value = "";
 }
 $("#nilaiForm").onsubmit = async (e) => {
   e.preventDefault(); const c = queue[idx];
@@ -366,15 +376,21 @@ $("#csv").onclick = async () => {
 };
 /* Kuis */
 const HURUF = "ABCD";
-const baru = () => ({ teks: "", opsi: ["", "", "", ""], benar: null, bobot: 1 });
+const baru = () => ({ tipe: "pg", teks: "", opsi: ["", "", "", ""], benar: null, isian: "", pembahasan: "", bobot: 1 });
+const msDari = (v) => (v ? new Date(v).getTime() : 0);
+const dtLokal = (ms) => (ms ? new Date(ms - new Date(ms).getTimezoneOffset() * 60000).toISOString().slice(0, 16) : "");
 let soalList = [];
 function renderSoal() {
   $("#soalBox").innerHTML = soalList.map((q, i) => `<div class="card" style="margin-top:14px;background:var(--bg);padding:18px">
-    <div class="row" style="justify-content:space-between"><b>Soal ${i + 1}</b><button type="button" class="btn ghost sm" data-del="${i}">Hapus</button></div>
+    <div class="row" style="justify-content:space-between;flex-wrap:wrap"><b>Soal ${i + 1}</b><div class="row" style="gap:8px">
+      <select data-f="tipe" data-i="${i}" style="width:auto"><option value="pg" ${q.tipe === "pg" ? "selected" : ""}>Pilihan ganda</option><option value="isian" ${q.tipe === "isian" ? "selected" : ""}>Isian singkat</option><option value="esai" ${q.tipe === "esai" ? "selected" : ""}>Esai (dinilai guru)</option></select>
+      <button type="button" class="btn ghost sm" data-del="${i}">Hapus</button></div></div>
     <label>Pertanyaan</label><textarea data-f="teks" data-i="${i}" style="min-height:70px">${esc(q.teks)}</textarea>
-    <label>Pilihan jawaban (klik bulatan di samping jawaban yang benar)</label>
-    ${q.opsi.map((o, j) => `<div class="row" style="margin-bottom:8px"><input class="qrad" type="radio" name="b${i}" data-i="${i}" data-j="${j}" ${q.benar === j ? "checked" : ""}><b>${HURUF[j]}</b><input data-o="1" data-i="${i}" data-j="${j}" value="${esc(o)}" placeholder="Pilihan ${HURUF[j]}"></div>`).join("")}
-    <label>Bobot nilai</label><input type="number" min="1" data-f="bobot" data-i="${i}" value="${q.bobot}" style="max-width:120px"></div>`).join("") || kosong("Belum ada soal.");
+    ${q.tipe === "pg" ? `<label>Pilihan jawaban (klik bulatan di samping jawaban yang benar)</label>${q.opsi.map((o, j) => `<div class="row" style="margin-bottom:8px"><input class="qrad" type="radio" name="b${i}" data-i="${i}" data-j="${j}" ${q.benar === j ? "checked" : ""}><b>${HURUF[j]}</b><input data-o="1" data-i="${i}" data-j="${j}" value="${esc(o)}" placeholder="Pilihan ${HURUF[j]}"></div>`).join("")}`
+      : q.tipe === "isian" ? `<label>Jawaban yang diterima (satu per baris; huruf besar/kecil diabaikan)</label><textarea data-f="isian" data-i="${i}" style="min-height:60px">${esc(q.isian)}</textarea>`
+      : '<p class="mute sm" style="margin-top:10px">Soal esai tidak dinilai otomatis. Anda memberi nilai akhir di menu Periksa.</p>'}
+    <label>Pembahasan (opsional)</label><textarea data-f="pembahasan" data-i="${i}" style="min-height:56px">${esc(q.pembahasan)}</textarea>
+    ${q.tipe !== "esai" ? `<label>Bobot nilai</label><input type="number" min="1" data-f="bobot" data-i="${i}" value="${q.bobot}" style="max-width:120px">` : ""}</div>`).join("") || kosong("Belum ada soal.");
 }
 $("#tambahSoal").onclick = () => { soalList.push(baru()); renderSoal(); };
 $("#soalBox").addEventListener("input", (e) => {
@@ -382,7 +398,11 @@ $("#soalBox").addEventListener("input", (e) => {
   if (t.dataset.f) soalList[i][t.dataset.f] = t.dataset.f === "bobot" ? Number(t.value) || 1 : t.value;
   else if (t.dataset.o) soalList[i].opsi[+t.dataset.j] = t.value;
 });
-$("#soalBox").addEventListener("change", (e) => { if (e.target.type === "radio") soalList[+e.target.dataset.i].benar = +e.target.dataset.j; });
+$("#soalBox").addEventListener("change", (e) => {
+  const t = e.target;
+  if (t.type === "radio") soalList[+t.dataset.i].benar = +t.dataset.j;
+  if (t.dataset.f === "tipe") { soalList[+t.dataset.i].tipe = t.value; renderSoal(); }
+});
 $("#soalBox").addEventListener("click", (e) => { const d = e.target.closest("[data-del]"); if (d) { soalList.splice(+d.dataset.del, 1); renderSoal(); } });
 let editId = null;
 function keluarEdit() {
@@ -392,11 +412,17 @@ function keluarEdit() {
 }
 async function mulaiEdit(k) {
   if (!k) return;
-  let kunci = {};
-  try { kunci = (await getDoc(doc(db, "kunci", k.id))).data()?.kunci || {}; } catch (er) { return alert("Gagal memuat kunci jawaban: " + er.message); }
+  let kn = {};
+  try { kn = (await getDoc(doc(db, "kunci", k.id))).data() || {}; } catch (er) { return alert("Gagal memuat kunci jawaban: " + er.message); }
+  const kunci = kn.kunci || {}, bhs = kn.pembahasan || {};
   editId = k.id;
   $("#kMapel").value = mOf(k.mapelId || ""); $("#kJudul").value = k.judul || ""; $("#kDesk").value = k.deskripsi || "";
-  soalList = (k.soal || []).map((q) => ({ teks: q.teks || "", opsi: [0, 1, 2, 3].map((j) => q.opsi?.[j] || ""), benar: Number.isInteger(kunci[q.id]) ? kunci[q.id] : null, bobot: Number(q.bobot) || 1 }));
+  $("#kDurasi").value = k.durasi || 0; $("#kMaks").value = k.maks || 1; $("#kBuka").value = dtLokal(k.buka); $("#kTutup").value = dtLokal(k.tutup);
+  $("#kAcak").checked = !!k.acak; $("#kAcakOpsi").checked = !!k.acakOpsi; $("#kBhs").value = k.pembahasan || "tidak";
+  soalList = (k.soal || []).map((q) => {
+    const tipe = q.tipe || "pg", kk = kunci[q.id];
+    return { tipe, teks: q.teks || "", opsi: [0, 1, 2, 3].map((j) => q.opsi?.[j] || ""), benar: tipe === "pg" && Number.isInteger(kk) ? kk : null, isian: tipe === "isian" && Array.isArray(kk) ? kk.join("\n") : "", pembahasan: bhs[q.id] || "", bobot: Number(q.bobot) || 1 };
+  });
   if (!soalList.length) soalList = [baru()];
   renderSoal();
   $("#kHead").textContent = "Edit kuis"; $("#kSimpan").textContent = "Simpan perubahan";
@@ -410,7 +436,7 @@ views.kuis = async () => {
   await loadMapel();
   if (!soalList.length) { soalList = [baru()]; renderSoal(); }
   const ks = (await getDocs(query(collection(db, "kuis"), orderBy("createdAt", "desc")))).docs.map((d) => ({ id: d.id, ...d.data() }));
-  $("#kDaftar").innerHTML = ks.map((k) => `<li><div class="row"><div class="fi">${icon("edit")}</div><div><b>${esc(k.judul)}</b><div class="mute sm">${(k.soal || []).length} soal · ${esc(mapelNama(k.mapelId))}</div></div></div>
+  $("#kDaftar").innerHTML = ks.map((k) => `<li><div class="row"><div class="fi">${icon("edit")}</div><div><b>${esc(k.judul)}</b><div class="mute sm">${(k.soal || []).length} soal · ${esc(mapelNama(k.mapelId))} · ${k.durasi ? k.durasi + " menit" : "tanpa batas waktu"} · ${k.maks || 1}x percobaan${k.buka || k.tutup ? " · berjadwal" : ""}</div></div></div>
     <div class="row" style="gap:6px"><button class="btn ghost sm" data-edit="${k.id}" title="Edit kuis">${icon("edit")} Edit</button>
     <button class="btn ghost sm" data-id="${k.id}" style="color:var(--bad)">${icon("trash")}</button></div></li>`).join("") || kosong("Belum ada kuis.");
   document.querySelectorAll("#kDaftar [data-edit]").forEach((b) => (b.onclick = () => mulaiEdit(ks.find((k) => k.id === b.dataset.edit))));
@@ -421,22 +447,37 @@ views.kuis = async () => {
 };
 $("#kForm").onsubmit = async (e) => {
   e.preventDefault();
-  const soal = [], kunci = {};
+  const soal = [], kunci = {}, bhs = {};
   for (let i = 0; i < soalList.length; i++) {
-    const q = soalList[i], idx = [0, 1, 2, 3].filter((j) => q.opsi[j].trim());
-    if (!q.teks.trim() || idx.length < 2) return alert(`Soal ${i + 1}: isi pertanyaan dan minimal 2 pilihan jawaban.`);
-    if (q.benar === null || !idx.includes(q.benar)) return alert(`Soal ${i + 1}: tandai jawaban yang benar (bulatan di samping pilihan).`);
-    const id = "q" + (i + 1);
-    soal.push({ id, teks: q.teks.trim(), opsi: idx.map((j) => q.opsi[j].trim()), bobot: q.bobot || 1 });
-    kunci[id] = idx.indexOf(q.benar);
+    const q = soalList[i], no = `Soal ${i + 1}: `, id = "q" + (i + 1);
+    if (!q.teks.trim()) return alert(no + "isi pertanyaan.");
+    if (q.pembahasan.trim()) bhs[id] = q.pembahasan.trim();
+    if (q.tipe === "pg") {
+      const idx = [0, 1, 2, 3].filter((j) => q.opsi[j].trim());
+      if (idx.length < 2) return alert(no + "isi minimal 2 pilihan jawaban.");
+      if (q.benar === null || !idx.includes(q.benar)) return alert(no + "tandai jawaban yang benar (bulatan di samping pilihan).");
+      soal.push({ id, tipe: "pg", teks: q.teks.trim(), opsi: idx.map((j) => q.opsi[j].trim()), bobot: q.bobot || 1 });
+      kunci[id] = idx.indexOf(q.benar);
+    } else if (q.tipe === "isian") {
+      const j = q.isian.split("\n").map((x) => x.trim()).filter(Boolean);
+      if (!j.length) return alert(no + "isi minimal satu jawaban yang diterima.");
+      soal.push({ id, tipe: "isian", teks: q.teks.trim(), bobot: q.bobot || 1 });
+      kunci[id] = j;
+    } else { soal.push({ id, tipe: "esai", teks: q.teks.trim(), bobot: 1 }); kunci[id] = null; }
   }
   if (!soal.length) return alert("Tambahkan minimal 1 soal.");
+  let maks = Math.max(1, Math.floor(Number($("#kMaks").value) || 1));
+  if (soal.some((q) => q.tipe === "esai") && maks > 1) { maks = 1; toast("Kuis dengan soal esai dibatasi 1 kali percobaan"); }
+  const buka = msDari($("#kBuka").value), tutup = msDari($("#kTutup").value), bmode = $("#kBhs").value;
+  if (buka && tutup && tutup <= buka) return alert("Waktu ditutup harus setelah waktu dibuka.");
+  if (bmode === "tutup" && !tutup) return alert("Untuk pembahasan 'setelah kuis ditutup', isi dulu waktu ditutup.");
   $("#kSimpan").disabled = true;
   const diEdit = !!editId;
   const id = editId || "k" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   try {
-    await setDoc(doc(db, "kunci", id), { kunci });
-    const data = { mapelId: $("#kMapel").value, judul: $("#kJudul").value.trim(), deskripsi: $("#kDesk").value.trim(), soal };
+    await setDoc(doc(db, "kunci", id), { kunci, pembahasan: bhs });
+    const data = { mapelId: $("#kMapel").value, judul: $("#kJudul").value.trim(), deskripsi: $("#kDesk").value.trim(), soal,
+      durasi: Math.max(0, Math.floor(Number($("#kDurasi").value) || 0)), maks, buka, tutup, acak: $("#kAcak").checked, acakOpsi: $("#kAcakOpsi").checked, pembahasan: bmode };
     if (diEdit) await updateDoc(doc(db, "kuis", id), { ...data, updatedAt: serverTimestamp() });
     else await setDoc(doc(db, "kuis", id), { ...data, createdAt: serverTimestamp() });
     await bump(); keluarEdit(); toast(diEdit ? "Perubahan kuis tersimpan" : "Kuis tersimpan"); views.kuis();
