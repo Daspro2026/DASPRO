@@ -73,6 +73,7 @@ dialog{border:0;border-radius:22px;max-width:580px;width:calc(100% - 32px);paddi
   <div class="grid gk">
     <form class="card" id="mForm"><h2>Tambah mata pelajaran</h2>
       <label>Nama mata pelajaran</label><input id="mNama" required placeholder="Contoh: Informatika">
+      <label>Guru pengampu</label><input id="mGuru" required placeholder="Nama guru yang mengajar">
       <button class="btn full">Tambah</button></form>
     <div class="card"><h2>Daftar mata pelajaran</h2><ul class="list" id="mDaftar" style="margin-top:8px"></ul></div>
   </div></section>
@@ -172,6 +173,23 @@ dialog{border:0;border-radius:22px;max-width:580px;width:calc(100% - 32px);paddi
   </div>
   <div class="card" style="margin-top:18px"><h2>Keamanan akun</h2><p class="mute sm" style="margin:6px 0 14px">Untuk mengganti kata sandi, kami kirim tautan verifikasi ke email <b id="aEmail"></b>. Buka email itu, lalu buat kata sandi baru.</p><button type="button" class="btn ghost sm" id="gantiSandi">Kirim tautan ganti kata sandi</button></div></section>
 
+
+<section id="profilG" class="hide"><div class="ph"><div><h1>Profil saya</h1><p>Lengkapi data guru. Nama Anda juga tampil sebagai guru pengampu di mata pelajaran siswa.</p></div></div>
+  <div class="grid gk">
+    <div class="card pf">
+      <div class="av pfav" id="gAv"></div>
+      <h2 id="gNm"></h2><p class="pfrole" id="gJb"></p><p class="mute sm pre" id="gBio"></p>
+      <div class="pfc" id="gKon"></div>
+      <label class="pfup" for="gFoto">Ganti foto profil</label><input type="file" id="gFoto" accept="image/*" hidden>
+      <button type="button" class="btn ghost sm" id="gHapus" style="margin-top:10px">Hapus foto</button>
+    </div>
+    <form class="card" id="gForm"><h2>Data diri</h2>
+      <label>Nama lengkap</label><input id="gNama" required>
+      <div class="grid g2" style="gap:14px"><div><label>Jabatan / bidang</label><input id="gJabatan" placeholder="Contoh: Guru Informatika"></div><div><label>NIP / ID guru</label><input id="gNip" placeholder="Opsional"></div></div>
+      <div class="grid g2" style="gap:14px"><div><label>No. WhatsApp</label><input id="gHp" inputmode="tel" placeholder="08xxxxxxxxxx"></div><div><label>Email akun</label><input id="gEmail" disabled></div></div>
+      <label>Tentang saya</label><textarea id="gDesk" style="min-height:100px" placeholder="Pengalaman mengajar, motto, atau pesan untuk siswa"></textarea>
+      <button class="btn full">Simpan profil</button></form>
+  </div></section>
 </main></div>
 <script type="module">
 import { db, storage, collection, getDocs, addDoc, deleteDoc, updateDoc, doc, query, orderBy, serverTimestamp, ref, uploadBytes, getDownloadURL, setDoc, getDoc, where } from "./js/firebase.js";
@@ -179,10 +197,72 @@ import { pasangGantiSandi } from "./js/reset.js";
 import { guard, esc, $, ago, icon, toast, applySettings, safeUrl, fileChips } from "./js/common.js";
 
 const views = {};
-const { show, user: akun, profile: akunProfil } = await guard(true, [["ringkasan", "Ringkasan", "grid"], ["mapel", "Mata pelajaran", "book"], ["kelas", "Kelas", "users"], ["daftar", "Pendaftaran", "key"], ["konten", "Materi & Tugas", "upload"], ["periksa", "Periksa", "check"], ["kuis", "Kuis", "edit"], ["nilaiS", "Rekap nilai", "star"], ["analitik", "Analitik", "chart"], ["setelan", "Pengaturan", "sliders"]], views);
+const { show, user: akun, profile: akunProfil } = await guard(true, [["ringkasan", "Ringkasan", "grid"], ["mapel", "Mata pelajaran", "book"], ["kelas", "Kelas", "users"], ["daftar", "Pendaftaran", "key"], ["konten", "Materi & Tugas", "upload"], ["kuis", "Kuis", "edit"], ["periksa", "Periksa", "check"], ["nilaiS", "Rekap nilai", "star"], ["analitik", "Analitik", "chart"], ["profilG", "Profil", "users"], ["setelan", "Pengaturan", "sliders"]], views);
 const all = async (c) => (await getDocs(collection(db, c))).docs.map((d) => ({ id: d.id, ...d.data() }));
 const kosong = (t) => `<div class="empty">${t}</div>`;
 $("#keP").onclick = () => show("periksa");
+/* Sidebar: label grup, ikon profil, kartu akun bisa diklik */
+{
+  const G = { ringkasan: "Menu", mapel: "Kelola", konten: "Pembelajaran", periksa: "Penilaian", profilG: "Akun" };
+  Object.entries(G).forEach(([t, l]) => document.querySelector(`.side nav [data-t="${t}"]`)?.insertAdjacentHTML("beforebegin", `<div class="nl">${l}</div>`));
+  const ic = document.querySelector('.side nav [data-t="profilG"] span');
+  if (ic) { ic.removeAttribute("data-ic"); ic.innerHTML = '<svg class="i" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 11a4 4 0 100-8 4 4 0 000 8z"/></svg>'; }
+  const me = document.querySelector(".me");
+  if (me) { me.classList.add("go"); me.title = "Buka profil"; me.onclick = (e) => { if (!e.target.closest("#keluar")) show("profilG"); }; }
+}
+const jabatanSide = () => { const s = document.querySelector(".me small"); if (s) s.textContent = akunProfil?.jabatan || "Guru (admin)"; };
+jabatanSide();
+
+/* Profil guru */
+const avHtml = (f, n) => (f && /^data:image\//.test(f) ? `<img src="${f}" alt="" style="width:100%;height:100%;object-fit:cover">` : esc((n || "?")[0].toUpperCase()));
+let gFoto = akunProfil?.foto || "";
+function paintG() {
+  const nm = $("#gNama").value.trim() || akunProfil?.nama || "";
+  $("#gAv").innerHTML = avHtml(gFoto, nm);
+  $("#gNm").textContent = nm || "Guru";
+  $("#gJb").textContent = $("#gJabatan").value.trim() || "Guru";
+  $("#gBio").textContent = $("#gDesk").value.trim() || "Belum ada deskripsi.";
+  $("#gKon").innerHTML = [akun?.email, $("#gHp").value.trim(), $("#gNip").value.trim() && "NIP " + $("#gNip").value.trim()].filter(Boolean).map((t) => `<span>${esc(t)}</span>`).join("");
+}
+views.profilG = () => {
+  const p = akunProfil || {};
+  $("#gNama").value = p.nama || ""; $("#gJabatan").value = p.jabatan || ""; $("#gNip").value = p.nip || "";
+  $("#gHp").value = p.hp || ""; $("#gEmail").value = akun?.email || p.email || ""; $("#gDesk").value = p.deskripsi || "";
+  gFoto = p.foto || ""; paintG();
+};
+["gNama", "gJabatan", "gNip", "gHp", "gDesk"].forEach((id) => ($("#" + id).oninput = paintG));
+$("#gFoto").onchange = (e) => {
+  const f = e.target.files[0]; if (!f) return;
+  const img = new Image();
+  img.onload = () => {
+    const c = document.createElement("canvas"); c.width = c.height = 256;
+    const s = Math.min(img.width, img.height);
+    c.getContext("2d").drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, 0, 0, 256, 256);
+    gFoto = c.toDataURL("image/jpeg", 0.82); paintG(); URL.revokeObjectURL(img.src);
+  };
+  img.onerror = () => toast("Gambar tidak bisa dibaca");
+  img.src = URL.createObjectURL(f); e.target.value = "";
+};
+$("#gHapus").onclick = () => { gFoto = ""; paintG(); };
+$("#gForm").onsubmit = async (e) => {
+  e.preventDefault();
+  const d = { nama: $("#gNama").value.trim() || akunProfil?.nama || "Guru", jabatan: $("#gJabatan").value.trim(), nip: $("#gNip").value.trim(), hp: $("#gHp").value.trim(), deskripsi: $("#gDesk").value.trim(), foto: gFoto };
+  const lama = akunProfil?.nama;
+  try {
+    await updateDoc(doc(db, "users", akun.uid), d);
+    Object.assign(akunProfil, d);
+    const me = document.querySelector(".me");
+    if (me) { me.querySelector(".av").innerHTML = avHtml(gFoto, d.nama); me.querySelector("b").textContent = d.nama; }
+    jabatanSide();
+    // nama guru di mata pelajaran ikut diperbarui bila sebelumnya memakai nama lama
+    if (lama && lama !== d.nama) {
+      const hit = (await all("mapel")).filter((m) => m.guru === lama);
+      if (hit.length) { await Promise.all(hit.map((m) => updateDoc(doc(db, "mapel", m.id), { guru: d.nama }))); await bump(); }
+    }
+    toast("Profil disimpan"); paintG();
+  } catch (er) { alert("Gagal menyimpan: " + er.message); }
+};
+
 
 /* Mata pelajaran */
 let mapelAll = [];
@@ -206,12 +286,16 @@ views.mapel = async () => {
   const [m, t, k] = await Promise.all(["materi", "tugas", "kuis"].map(all));
   $("#mDaftar").innerHTML = mapelAll.map((x) => {
     const n = [m, t, k].map((a) => a.filter((i) => mOf(i.mapelId) === x.id).length);
-    return `<li><div class="row"><div class="fi">${icon("book")}</div><div><b>${esc(x.nama)}</b><div class="mute sm">${n[0]} materi · ${n[1]} tugas · ${n[2]} kuis</div></div></div>
-      <div style="display:flex;gap:6px"><button class="btn ghost sm" data-r="${x.id}" title="Ubah nama">${icon("edit")}</button><button class="btn ghost sm" data-x="${x.id}" title="Hapus" style="color:var(--bad)">${icon("trash")}</button></div></li>`;
+    return `<li><div class="row"><div class="fi">${icon("book")}</div><div><b>${esc(x.nama)}</b><div class="mute sm">Guru: ${x.guru ? esc(x.guru) : '<span style="color:var(--warn)">belum diisi</span>'}</div><div class="mute sm">${n[0]} materi · ${n[1]} tugas · ${n[2]} kuis</div></div></div>
+      <div style="display:flex;gap:6px"><button class="btn ghost sm" data-r="${x.id}" title="Ubah nama / guru">${icon("edit")}</button><button class="btn ghost sm" data-x="${x.id}" title="Hapus" style="color:var(--bad)">${icon("trash")}</button></div></li>`;
   }).join("") || kosong("Belum ada mata pelajaran. Tambahkan yang pertama.");
   document.querySelectorAll("#mDaftar [data-r]").forEach((b) => (b.onclick = async () => {
-    const n = prompt("Nama baru mata pelajaran:", mapelNama(b.dataset.r));
-    if (n && n.trim()) { await updateDoc(doc(db, "mapel", b.dataset.r), { nama: n.trim() }); await bump(); toast("Nama diubah"); views.mapel(); }
+    const x0 = mapelAll.find((m) => m.id === b.dataset.r) || {};
+    const n = prompt("Nama mata pelajaran:", x0.nama || "");
+    if (!n || !n.trim()) return;
+    const g = prompt("Guru pengampu:", x0.guru || akunProfil?.nama || "");
+    if (g === null) return;
+    await updateDoc(doc(db, "mapel", b.dataset.r), { nama: n.trim(), guru: g.trim() }); await bump(); toast("Mata pelajaran diperbarui"); views.mapel();
   }));
   document.querySelectorAll("#mDaftar [data-x]").forEach((b) => (b.onclick = async () => {
     if (!confirm("Hapus mata pelajaran ini? Materi, tugas, dan kuis di dalamnya tidak dihapus, tetapi dipindahkan ke 'Umum'.")) return;
@@ -221,9 +305,10 @@ views.mapel = async () => {
 $("#mForm").onsubmit = async (e) => {
   e.preventDefault();
   const id = "m" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
-  try { await setDoc(doc(db, "mapel", id), { nama: $("#mNama").value.trim(), createdAt: serverTimestamp() }); await bump(); e.target.reset(); toast("Mata pelajaran ditambahkan"); views.mapel(); }
+  try { await setDoc(doc(db, "mapel", id), { nama: $("#mNama").value.trim(), guru: $("#mGuru").value.trim(), createdAt: serverTimestamp() }); await bump(); e.target.reset(); $("#mGuru").value = akunProfil?.nama || ""; toast("Mata pelajaran ditambahkan"); views.mapel(); }
   catch (er) { alert("Gagal menyimpan: " + er.message + "\nPastikan firestore.rules terbaru sudah di-Publish."); }
 };
+$("#mGuru").value = akunProfil?.nama || "";
 $("#cFilter").onchange = () => views.konten();
 $("#rMapel").onchange = () => views.nilaiS();
 
