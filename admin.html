@@ -141,15 +141,17 @@ dialog{border:0;border-radius:22px;max-width:580px;width:calc(100% - 32px);paddi
     <div class="card"><h2>Pratinjau</h2><p class="mute sm" style="margin:6px 0 16px">Menu, tombol, dan label di halaman ini mengikuti pilihan Anda.</p>
       <div class="banner" style="padding:22px"><b style="font-size:1.1rem">Halo, Aisyah</b><p>Contoh banner siswa.</p></div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="btn sm" type="button">Contoh tombol</button><span class="tag">Contoh label</span><span class="tag ok">Nilai 90</span></div></div>
-  </div></section>
+  </div>
+  <div class="card" style="margin-top:18px"><h2>Keamanan akun</h2><p class="mute sm" style="margin:6px 0 14px">Untuk mengganti kata sandi, kami kirim tautan verifikasi ke email <b id="aEmail"></b>. Buka email itu, lalu buat kata sandi baru.</p><button type="button" class="btn ghost sm" id="gantiSandi">Kirim tautan ganti kata sandi</button></div></section>
 
 </main></div>
 <script type="module">
 import { db, storage, collection, getDocs, addDoc, deleteDoc, updateDoc, doc, query, orderBy, serverTimestamp, ref, uploadBytes, getDownloadURL, setDoc, getDoc, where } from "./js/firebase.js";
+import { pasangGantiSandi } from "./js/reset.js";
 import { guard, esc, $, ago, icon, toast, applySettings, safeUrl, fileChips } from "./js/common.js";
 
 const views = {};
-const { show } = await guard(true, [["ringkasan", "Ringkasan", "grid"], ["mapel", "Mata pelajaran", "book"], ["kelas", "Kelas", "users"], ["konten", "Materi & Tugas", "upload"], ["periksa", "Periksa", "check"], ["kuis", "Kuis", "edit"], ["nilaiS", "Rekap nilai", "star"], ["setelan", "Pengaturan", "sliders"]], views);
+const { show, user: akun, profile: akunProfil } = await guard(true, [["ringkasan", "Ringkasan", "grid"], ["mapel", "Mata pelajaran", "book"], ["kelas", "Kelas", "users"], ["konten", "Materi & Tugas", "upload"], ["periksa", "Periksa", "check"], ["kuis", "Kuis", "edit"], ["nilaiS", "Rekap nilai", "star"], ["setelan", "Pengaturan", "sliders"]], views);
 const all = async (c) => (await getDocs(collection(db, c))).docs.map((d) => ({ id: d.id, ...d.data() }));
 const kosong = (t) => `<div class="empty">${t}</div>`;
 $("#keP").onclick = () => show("periksa");
@@ -430,6 +432,7 @@ $("#kForm").onsubmit = async (e) => {
 };
 
 /* Pengaturan */
+$("#aEmail").textContent = akun?.email || akunProfil?.email || "-"; pasangGantiSandi($("#gantiSandi"), akun?.email || akunProfil?.email, toast);
 const DEF = { nama: "DASPRO", warna: "#4338CA", judul: "Belajar tertata,\nnilai terpantau.", deskripsi: "Daus Academic & Skills Platform: tempat modul, materi, tugas, dan umpan balik guru berkumpul dalam satu halaman yang rapi.", logo: "" };
 const WARNA = [["Indigo", "#4338CA"], ["Biru", "#1D4ED8"], ["Teal", "#0F766E"], ["Hijau", "#047857"], ["Ungu", "#7E22CE"], ["Merah", "#BE123C"], ["Oranye", "#C2410C"], ["Abu", "#334155"]];
 let cur = { ...DEF };
