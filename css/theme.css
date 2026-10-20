@@ -125,9 +125,17 @@ a.fchip:hover{border-color:var(--b2);background:var(--soft);transform:translateY
 .side .logo{flex:none}.side .me{flex:none}
 .me.go{cursor:pointer;transition:background .2s,border-color .2s}.me.go:hover{background:rgba(255,255,255,.1)!important;border-color:rgba(255,255,255,.2)!important}
 @media(min-width:861px){
-  .app .side{position:fixed;top:0;left:0;width:252px;height:100vh;height:100dvh;overflow:hidden;gap:14px;padding:22px 16px 16px;z-index:20}
-  .app .main{grid-column:2}
-  .side nav{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;margin:0 -16px;padding:0 16px 8px;gap:3px;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.18) transparent}
+  /* Dua area scroll terpisah: sidebar (kiri) dan konten (kanan). Halaman itu sendiri tidak scroll. */
+  html:has(.app),body:has(.app){height:100%;overflow:hidden}
+  body:has(.app){display:flex;flex-direction:column}
+  .app{flex:1;min-height:0;grid-template-columns:252px minmax(0,1fr);grid-template-rows:minmax(0,1fr)}
+  .app .side{position:static;height:100%;min-height:0;overflow:hidden;gap:14px;padding:22px 16px 16px}
+  .app .main{height:100%;max-width:none;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scroll-behavior:smooth;scrollbar-gutter:stable;scrollbar-width:thin;scrollbar-color:#C5CBE0 transparent}
+  .app .main::-webkit-scrollbar{width:10px}
+  .app .main::-webkit-scrollbar-thumb{background:#C5CBE0;border-radius:10px;border:3px solid transparent;background-clip:content-box}
+  .app .main::-webkit-scrollbar-thumb:hover{background:#9EA8C8;background-clip:content-box;border:3px solid transparent}
+  .app .main>section,.app .main>.mtop{max-width:1120px}
+  .side nav{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;margin:0 -16px;padding:0 16px 20px;gap:3px;-webkit-mask-image:linear-gradient(#000 calc(100% - 22px),transparent);mask-image:linear-gradient(#000 calc(100% - 22px),transparent);scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.18) transparent}
   .side nav::-webkit-scrollbar{width:6px}
   .side nav::-webkit-scrollbar-thumb{background:rgba(255,255,255,.16);border-radius:6px}
   .side nav::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.32)}
