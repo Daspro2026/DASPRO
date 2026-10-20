@@ -150,10 +150,28 @@ const mapelCard = (m) => {
     <div><h2>${esc(m.nama)}</h2></div><p class="mute sm">${M.length} materi · ${T.length} tugas · ${K.length} kuis</p></div>`;
 };
 const bindMapel = (root) => document.querySelectorAll(root + " [data-m]").forEach((c) => (c.onclick = () => openMapel(c.dataset.m)));
+const kuisApi = async (aksi, data) => {
+  if (!auth.currentUser?.getIdToken) throw new Error("Kuis membutuhkan koneksi Firebase (tidak tersedia di mode demo).");
+  const token = await auth.currentUser.getIdToken();
+  const r = await fetch("/api/submit-kuis", { method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + token }, body: JSON.stringify({ aksi, ...data }) });
+  const res = await r.json();
+  if (!r.ok) throw new Error(res.error || "Terjadi kesalahan");
+  return res;
+};
+const fmtWaktu = (ms) => new Date(ms).toLocaleString("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+let timerKuis = null;
+const reviewHtml = (rv) => (rv || []).map((q, i) => `<div class="ans" style="margin-top:10px"><b>${i + 1}. ${esc(q.teks)}</b>
+  <div class="sm" style="margin-top:6px">Jawaban Anda: ${esc(q.j || "-")} ${q.ok === true ? '<span class="tag ok">Benar</span>' : q.ok === false ? '<span class="tag warn">Salah</span>' : ""}</div>
+  ${q.kunci ? `<div class="sm mute">Kunci: ${esc(q.kunci)}</div>` : ""}${q.pembahasan ? `<div class="sm" style="margin-top:6px">${esc(q.pembahasan)}</div>` : ""}</div>`).join("");
 const kItem = (k) => {
-  const s = subs[k.id];
-  const tag = s ? `<span class="tag ok">Nilai ${esc(s.nilai)}</span>` : '<span class="tag warn">Belum dikerjakan</span>';
-  return `<li><a href="#" data-k="${k.id}" class="row"><div class="fi">${icon("edit")}</div><div><b>${esc(k.judul)}</b><div class="mute sm">${(k.soal || []).length} soal${k.deskripsi ? " · " + esc(k.deskripsi) : ""}</div></div></a>${tag}</li>`;
+  const s = subs[k.id], now = Date.now(), maks = Number(k.maks) || 1;
+  let tag;
+  if (s) tag = s.status === "selesai" ? `<span class="tag ok">Nilai ${esc(s.nilai)}</span>` : '<span class="tag">Menunggu nilai</span>';
+  else if (k.buka && now < k.buka) tag = `<span class="tag">Dibuka ${fmtWaktu(k.buka)}</span>`;
+  else if (k.tutup && now > k.tutup) tag = '<span class="tag">Ditutup</span>';
+  else tag = '<span class="tag warn">Belum dikerjakan</span>';
+  const info = [`${(k.soal || []).length} soal`, k.durasi ? k.durasi + " menit" : "", maks > 1 ? maks + "x percobaan" : ""].filter(Boolean).join(" · ");
+  return `<li><a href="#" data-k="${k.id}" class="row"><div class="fi">${icon("edit")}</div><div><b>${esc(k.judul)}</b><div class="mute sm">${info}${k.deskripsi ? " · " + esc(k.deskripsi) : ""}</div></div></a>${tag}</li>`;
 };
 
 views.beranda = () => {
@@ -197,6 +215,7 @@ views.nilai = () => {
   $("#nilaiTbl").innerHTML = r.length ? `<table><tr><th>Mapel</th><th>Tugas / kuis</th><th>Nilai</th><th>Umpan balik</th></tr>${r.map(([id, s]) => { const src = [...tugas, ...kuis].find((x) => x.id === id); return `<tr><td>${esc(src ? namaMapel(src) : "Umum")}</td><td><b>${esc(s.tugasJudul)}</b></td><td><span class="tag ok">${esc(s.nilai)}</span></td><td class="mute">${esc(s.feedback || "-")}</td></tr>`; }).join("")}</table>` : kosong("Belum ada nilai.");
 };
 $("#tutup").onclick = () => $("#dlg").close();
+$("#dlg").addEventListener("close", () => clearInterval(timerKuis));
 
 function buka(id) {
   const t = tugas.find((x) => x.id === id), s = subs[id];
@@ -260,31 +279,59 @@ function buka(id) {
   $("#dlg").showModal();
 }
 function kerjakan(id) {
-  const k = kuis.find((x) => x.id === id), s = subs[id];
-  if (s) {
-    $("#isi").innerHTML = `<h1 style="font-size:1.35rem">${esc(k.judul)}</h1><div class="ans" style="text-align:center"><div class="score">${esc(s.nilai)}</div><p class="mute" style="margin-top:6px">${esc(s.feedback || "")}</p></div><p class="mute sm" style="margin-top:12px">Kuis ini sudah dikerjakan dan tidak bisa diulang.</p>`;
-    return $("#dlg").showModal();
-  }
-  $("#isi").innerHTML = `<h1 style="font-size:1.35rem">${esc(k.judul)}</h1><p class="mute sm">${(k.soal || []).length} soal. Semua soal harus dijawab.</p>
-    <form id="kf">${(k.soal || []).map((q, i) => `<div style="margin-top:20px"><b>${i + 1}. ${esc(q.teks)}</b>${q.opsi.map((o, j) => `<label class="opt"><input type="radio" name="q${i}" value="${j}" required><span>${"ABCD"[j]}. ${esc(o)}</span></label>`).join("")}</div>`).join("")}
-    <button class="btn full">Kirim jawaban</button></form>`;
-  $("#kf").onsubmit = async (e) => {
-    e.preventDefault();
-    if (!confirm("Kirim jawaban? Jawaban tidak bisa diubah.")) return;
-    const fd = new FormData(e.target), jawaban = {};
-    k.soal.forEach((q, i) => (jawaban[q.id] = Number(fd.get("q" + i))));
-    const btn = e.target.querySelector("button"); btn.disabled = true; btn.textContent = "Menghitung nilai...";
-    try {
-      if (!auth.currentUser?.getIdToken) throw new Error("Kuis membutuhkan koneksi Firebase (tidak tersedia di mode demo).");
-      const token = await auth.currentUser.getIdToken();
-      const r = await fetch("/api/submit-kuis", { method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + token }, body: JSON.stringify({ kuisId: id, jawaban }) });
-      const res = await r.json();
-      if (!r.ok) throw new Error(res.error || "Gagal mengirim jawaban");
-      subs[id] = { status: "selesai", nilai: res.nilai, feedback: res.feedback, tugasJudul: "Kuis: " + k.judul };
-      views.beranda(); refreshDetail(); kerjakan(id);
-    } catch (er) { alert(er.message); btn.disabled = false; btn.textContent = "Kirim jawaban"; }
+  clearInterval(timerKuis);
+  const k = kuis.find((x) => x.id === id); if (!k) return;
+  const s = subs[id], now = Date.now(), maks = Number(k.maks) || 1, pakai = s ? s.percobaan || 1 : 0;
+  let h = `<h1 style="font-size:1.35rem">${esc(k.judul)}</h1><p class="mute sm" style="margin-top:4px">${(k.soal || []).length} soal · ${k.durasi ? "waktu " + k.durasi + " menit" : "tanpa batas waktu"} · ${maks} kali percobaan</p>`;
+  if (k.deskripsi) h += `<p style="margin-top:8px">${esc(k.deskripsi)}</p>`;
+  if (k.buka || k.tutup) h += `<p class="mute sm" style="margin-top:6px">${[k.buka ? "Dibuka " + fmtWaktu(k.buka) : "", k.tutup ? "Ditutup " + fmtWaktu(k.tutup) : ""].filter(Boolean).join(" · ")}</p>`;
+  if (s) h += `<div class="ans" style="text-align:center;margin-top:16px">${s.status === "selesai" ? `<div class="score">${esc(s.nilai)}</div><p class="mute" style="margin-top:6px">${esc(s.feedback || "")}</p>` : '<span class="mute">Menunggu diperiksa guru.</span>'}<p class="mute sm" style="margin-top:6px">Percobaan ${pakai} dari ${maks}</p></div>`;
+  if (k.buka && now < k.buka) h += '<p class="mute" style="margin-top:14px">Kuis ini belum dibuka.</p>';
+  else if (k.tutup && now > k.tutup) h += '<p class="mute" style="margin-top:14px">Kuis ini sudah ditutup.</p>';
+  else if (pakai >= maks) h += '<p class="mute sm" style="margin-top:12px">Kesempatan mengerjakan sudah habis.</p>';
+  else h += `<button class="btn full" id="mulaiBtn">${s ? "Coba lagi" : "Mulai kuis"}</button>${k.durasi ? '<p class="mute sm" style="margin-top:8px;text-align:center">Waktu mulai berjalan setelah tombol ditekan.</p>' : ""}`;
+  if (s && k.pembahasan && k.pembahasan !== "tidak") h += '<button class="btn ghost full" id="bhsBtn" style="margin-top:10px">Lihat pembahasan</button>';
+  $("#isi").innerHTML = h;
+  if ($("#mulaiBtn")) $("#mulaiBtn").onclick = () => mulaiKuis(k);
+  if ($("#bhsBtn")) $("#bhsBtn").onclick = async (e) => {
+    const b = e.target; b.disabled = true;
+    try { const r = await kuisApi("pembahasan", { kuisId: id }); $("#isi").insertAdjacentHTML("beforeend", `<div style="margin-top:16px">${reviewHtml(r.review)}</div>`); b.remove(); }
+    catch (er) { alert(er.message); b.disabled = false; }
   };
-  $("#dlg").showModal();
+  if (!$("#dlg").open) $("#dlg").showModal();
+}
+async function mulaiKuis(k) {
+  const btn = $("#mulaiBtn"); btn.disabled = true; btn.textContent = "Menyiapkan...";
+  try {
+    const r = await kuisApi("mulai", { kuisId: k.id });
+    const t0 = Date.now(); let terkirim = false;
+    $("#isi").innerHTML = `<div style="position:sticky;top:-30px;background:#fff;padding:8px 0 10px;z-index:2;display:flex;justify-content:space-between;align-items:center"><b>${esc(k.judul)}</b><span class="tag warn" id="tmr" style="font-size:.9rem"></span></div>
+      <form id="kf">${r.soal.map((q, i) => `<div style="margin-top:20px"><b>${i + 1}. ${esc(q.teks)}</b>${
+        q.tipe === "isian" ? `<input name="q${i}" placeholder="Ketik jawaban singkat" autocomplete="off" style="margin-top:8px">`
+        : q.tipe === "esai" ? `<textarea name="q${i}" placeholder="Tulis jawaban Anda" style="margin-top:8px"></textarea>`
+        : q.opsi.map((o, j) => `<label class="opt"><input type="radio" name="q${i}" value="${j}"><span>${"ABCD"[j]}. ${esc(o)}</span></label>`).join("")}</div>`).join("")}
+      <button class="btn full">Kirim jawaban</button></form>`;
+    const kirim = async (otomatis) => {
+      if (terkirim) return;
+      const fd = new FormData($("#kf")), jawaban = {}; let belum = 0;
+      r.soal.forEach((q, i) => { const v = String(fd.get("q" + i) ?? "").trim(); if (!v) belum++; else jawaban[q.id] = q.tipe === "pg" ? Number(v) : v; });
+      if (!otomatis && !confirm(belum ? `Masih ada ${belum} soal belum dijawab. Kirim sekarang?` : "Kirim jawaban? Jawaban tidak bisa diubah.")) return;
+      terkirim = true; clearInterval(timerKuis); const tb = $("#kf button"); tb.disabled = true; tb.textContent = "Menghitung nilai...";
+      try {
+        const res = await kuisApi("kirim", { kuisId: k.id, jawaban });
+        subs[k.id] = { ...(subs[k.id] || {}), status: res.status, nilai: res.terbaik, feedback: res.feedback, percobaan: res.percobaan, tugasJudul: "Kuis: " + k.judul };
+        views.beranda(); refreshDetail();
+        $("#isi").innerHTML = `<h1 style="font-size:1.35rem">${esc(k.judul)}</h1><div class="ans" style="text-align:center;margin-top:14px">${res.status === "selesai" ? `<div class="score">${esc(res.nilai)}</div>` : '<p>Jawaban terkirim. Menunggu diperiksa guru.</p>'}<p class="mute" style="margin-top:6px">${esc(res.feedback || "")}</p><p class="mute sm">Percobaan ${res.percobaan} dari ${res.maks}</p></div>${res.review ? reviewHtml(res.review) : ""}<button class="btn full" id="lagi">Kembali</button>`;
+        $("#lagi").onclick = () => kerjakan(k.id);
+      } catch (er) { terkirim = false; alert(er.message); tb.disabled = false; tb.textContent = "Kirim jawaban"; }
+    };
+    $("#kf").onsubmit = (e) => { e.preventDefault(); kirim(false); };
+    if (r.sisaMs > 0) {
+      const akhir = t0 + r.sisaMs;
+      const tik = () => { const sd = Math.max(0, Math.round((akhir - Date.now()) / 1000)); $("#tmr").textContent = `${String(Math.floor(sd / 60)).padStart(2, "0")}:${String(sd % 60).padStart(2, "0")}`; if (sd <= 0) { clearInterval(timerKuis); kirim(true); } };
+      tik(); timerKuis = setInterval(tik, 1000);
+    } else $("#tmr").remove();
+  } catch (er) { alert(er.message); btn.disabled = false; btn.textContent = "Mulai kuis"; }
 }
 /* Profil */
 $("#pEmail").textContent = user.email || profile.email || "-"; pasangGantiSandi($("#gantiSandi"), user.email || profile.email, toast);
