@@ -82,6 +82,7 @@ input:focus{border-color:var(--b2);box-shadow:0 0 0 4px color-mix(in srgb,var(--
       <div id="namaWrap" class="hide"><label>Nama lengkap</label><input id="nama" placeholder="Nama Anda" autocomplete="name"></div>
       <label>Email</label><input id="email" type="email" placeholder="nama@email.com" autocomplete="email" required>
       <label>Kata sandi</label><input id="pass" type="password" minlength="6" placeholder="Minimal 6 karakter" autocomplete="current-password" required>
+      <div id="kodeWrap" class="hide"><label id="kodeLbl">Kode kelas</label><input id="kode" placeholder="Contoh: K7M3QX9P" autocomplete="off" autocapitalize="characters" maxlength="24" style="text-transform:uppercase"><p class="mute" id="kodeNote" style="font-size:.82rem;margin-top:6px"></p></div>
       <a href="#" id="lupa" class="lupa">Lupa kata sandi?</a>
       <p class="err" id="err"></p>
       <button class="btn" id="kirim">Masuk</button>
@@ -131,6 +132,16 @@ function mode(d) {
   $("#namaWrap").classList.toggle("hide", !d); $("#nama").required = d;
   $("#pass").autocomplete = d ? "new-password" : "current-password";
   $("#lupa").classList.toggle("hide", d);
+  pasangKode();
+}
+// Mode pendaftaran dari guru (settings/pendaftaran): terbuka | kode | persetujuan
+let modeDaftar = "terbuka";
+async function pasangKode() {
+  try { const m = await getDoc(doc(db, "settings", "pendaftaran")); modeDaftar = (m.exists() && m.data().mode) || "terbuka"; } catch { modeDaftar = "terbuka"; }
+  $("#kodeWrap").classList.toggle("hide", !(daftar && modeDaftar !== "terbuka"));
+  $("#kode").required = daftar && modeDaftar === "kode";
+  $("#kodeLbl").textContent = modeDaftar === "kode" ? "Kode kelas" : "Kode kelas (opsional)";
+  $("#kodeNote").textContent = modeDaftar === "kode" ? "Minta kode kelas kepada guru Anda." : modeDaftar === "persetujuan" ? "Tanpa kode kelas, akun Anda perlu disetujui guru terlebih dahulu." : "";
 }
 function lupaMode(on) {
   $("#form").classList.toggle("hide", on); $("#formLupa").classList.toggle("hide", !on); document.querySelector(".seg").classList.toggle("hide", on);
@@ -154,8 +165,21 @@ $("#form").onsubmit = async (e) => {
   e.preventDefault(); $("#err").textContent = ""; $("#kirim").disabled = true;
   try {
     if (daftar) {
+      await pasangKode(); // pakai mode terbaru
+      let status = "aktif", extra = {};
+      const kode = $("#kode").value.trim().toUpperCase();
+      if (modeDaftar !== "terbuka") {
+        if (kode) {
+          if (!/^[A-Z0-9-]{4,24}$/.test(kode)) throw { code: "kode-salah" };
+          const k = await getDoc(doc(db, "kodeKelas", kode));
+          if (!k.exists() || !k.data().aktif) throw { code: "kode-salah" };
+          extra = { kode, kelasId: k.data().kelasId };
+        } else if (modeDaftar === "kode") throw { code: "kode-kosong" };
+        else status = "menunggu";
+      }
       const c = await createUserWithEmailAndPassword(auth, $("#email").value, $("#pass").value);
-      await setDoc(doc(db, "users", c.user.uid), { nama: $("#nama").value, email: $("#email").value, role: "siswa", createdAt: serverTimestamp() });
+      try { await setDoc(doc(db, "users", c.user.uid), { nama: $("#nama").value, email: $("#email").value, role: "siswa", status, ...extra, createdAt: serverTimestamp() }); }
+      catch (er) { try { await c.user.delete?.(); } catch {} throw er; } // jangan tinggalkan akun setengah jadi
       location.href = "dashboard.html";
     } else {
       const c = await signInWithEmailAndPassword(auth, $("#email").value, $("#pass").value);
@@ -163,7 +187,7 @@ $("#form").onsubmit = async (e) => {
       location.href = p?.role === "admin" ? "admin.html" : "dashboard.html";
     }
   } catch (er) {
-    const m = { "auth/email-already-in-use": "Email sudah terdaftar. Silakan masuk.", "auth/weak-password": "Kata sandi minimal 6 karakter.", "auth/invalid-credential": "Email atau kata sandi salah." };
+    const m = { "auth/email-already-in-use": "Email sudah terdaftar. Silakan masuk.", "auth/weak-password": "Kata sandi minimal 6 karakter.", "auth/invalid-credential": "Email atau kata sandi salah.", "kode-salah": "Kode kelas tidak valid atau sudah dinonaktifkan.", "kode-kosong": "Kode kelas wajib diisi.", "permission-denied": "Pendaftaran ditolak. Mode pendaftaran mungkin baru berubah; muat ulang halaman lalu coba lagi." };
     $("#err").textContent = m[er.code] || "Terjadi kesalahan. Periksa konfigurasi Firebase.";
     $("#kirim").disabled = false;
   }
