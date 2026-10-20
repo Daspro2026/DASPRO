@@ -82,8 +82,16 @@ input:focus{border-color:var(--b2);box-shadow:0 0 0 4px color-mix(in srgb,var(--
       <div id="namaWrap" class="hide"><label>Nama lengkap</label><input id="nama" placeholder="Nama Anda" autocomplete="name"></div>
       <label>Email</label><input id="email" type="email" placeholder="nama@email.com" autocomplete="email" required>
       <label>Kata sandi</label><input id="pass" type="password" minlength="6" placeholder="Minimal 6 karakter" autocomplete="current-password" required>
+      <a href="#" id="lupa" class="lupa">Lupa kata sandi?</a>
       <p class="err" id="err"></p>
       <button class="btn" id="kirim">Masuk</button>
+    </form>
+    <style>.lupa{display:block;text-align:right;font-size:.84rem;font-weight:700;color:var(--brand);margin-top:10px}.lupa:hover{text-decoration:underline}.okmsg{color:#15803D;font-size:.88rem;margin-top:12px;line-height:1.5}</style>
+    <form id="formLupa" class="hide">
+      <label>Email akun Anda</label><input id="emailLupa" type="email" placeholder="nama@email.com" autocomplete="email" required>
+      <p class="err" id="errLupa"></p><p class="okmsg" id="okLupa"></p>
+      <button class="btn" id="kirimLupa">Kirim tautan reset</button>
+      <a href="#" id="kembali" class="lupa" style="text-align:center">&larr; Kembali ke halaman masuk</a>
     </form>
   </section>
 
@@ -113,6 +121,7 @@ input:focus{border-color:var(--b2);box-shadow:0 0 0 4px color-mix(in srgb,var(--
 <script type="module">
 import { auth, db, signInWithEmailAndPassword, createUserWithEmailAndPassword, doc, getDoc, setDoc, serverTimestamp } from "./js/firebase.js";
 import { $ } from "./js/common.js";
+import { kirimReset, pesanReset } from "./js/reset.js";
 let daftar = false;
 function mode(d) {
   daftar = d;
@@ -121,7 +130,24 @@ function mode(d) {
   $("#sub").textContent = d ? "Daftar sebagai siswa untuk mulai belajar." : "Masuk untuk melanjutkan belajar.";
   $("#namaWrap").classList.toggle("hide", !d); $("#nama").required = d;
   $("#pass").autocomplete = d ? "new-password" : "current-password";
+  $("#lupa").classList.toggle("hide", d);
 }
+function lupaMode(on) {
+  $("#form").classList.toggle("hide", on); $("#formLupa").classList.toggle("hide", !on); document.querySelector(".seg").classList.toggle("hide", on);
+  $("#judul").textContent = on ? "Lupa kata sandi?" : "Selamat datang";
+  if (on) { $("#sub").textContent = "Kami kirim tautan verifikasi ke email Anda untuk membuat kata sandi baru."; $("#emailLupa").value = $("#email").value; $("#errLupa").textContent = ""; $("#okLupa").textContent = ""; }
+  else mode(false);
+}
+$("#lupa").onclick = (e) => { e.preventDefault(); lupaMode(true); };
+$("#kembali").onclick = (e) => { e.preventDefault(); lupaMode(false); };
+$("#formLupa").onsubmit = async (e) => {
+  e.preventDefault(); const b = $("#kirimLupa"); $("#errLupa").textContent = ""; $("#okLupa").textContent = ""; b.disabled = true;
+  try {
+    await kirimReset($("#emailLupa").value.trim());
+    $("#okLupa").textContent = "Jika email terdaftar, tautan reset sudah dikirim. Cek kotak masuk dan folder spam, lalu ikuti langkah di email.";
+    setTimeout(() => (b.disabled = false), 30000);
+  } catch (er) { $("#errLupa").textContent = pesanReset(er); b.disabled = false; }
+};
 $("#tMasuk").onclick = () => mode(false); $("#tDaftar").onclick = () => mode(true);
 if (location.hash === "#daftar") mode(true);
 $("#form").onsubmit = async (e) => {
