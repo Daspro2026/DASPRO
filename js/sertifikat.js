@@ -65,8 +65,31 @@ export async function gambarHalaman(b64, canvas) {
   return { W: v1.width, H: v1.height, halaman: pdf.numPages };
 }
 
+/* ---------- nomor sertifikat: KODE/INSTANSI/BULAN(romawi)/TAHUN/KODE-UNIK ---------- */
+const ROM = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII"];
+const ABJAD = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+const bersih = (s) => String(s || "").toUpperCase().replace(/[^A-Z0-9.\-]/g, "");
+export function formatNomor(kode, inst, tgl, uniq) {
+  const p = new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Jakarta", year: "numeric", month: "numeric" }).formatToParts(tgl);
+  const th = p.find((x) => x.type === "year").value, bl = Number(p.find((x) => x.type === "month").value);
+  return [bersih(kode) || "SERT", bersih(inst), ROM[bl - 1], th, uniq].filter(Boolean).join("/");
+}
+// Kode unik tetap: dihitung dari akun siswa + kuis/tugas, jadi sama setiap kali diunduh ulang.
+export async function kodeUnik(uid, id) {
+  const s = "daspro|" + uid + ":" + id; let b;
+  if (globalThis.crypto?.subtle) b = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s)));
+  else { const h = (seed) => { let x = seed >>> 0; for (const c of s) { x ^= c.charCodeAt(0); x = Math.imul(x, 16777619) >>> 0; } return x; }; const a = h(2166136261), z = h(97531); b = [a >>> 24, (a >>> 16) & 255, (a >>> 8) & 255, a & 255, z >>> 24]; }
+  let acc = 0, n = 0, out = "";
+  for (const v of b) { acc = (acc << 8) | v; n += 8; while (n >= 5 && out.length < 8) { out += ABJAD[(acc >> (n - 5)) & 31]; n -= 5; } acc &= (1 << n) - 1; if (out.length >= 8) break; }
+  return out.slice(0, 4) + "-" + out.slice(4);
+}
+export async function nomor(t, ctx = {}) {
+  if (!t.no?.on) return "";
+  return formatNomor(t.no.kode, t.no.inst, ctx.tgl instanceof Date ? ctx.tgl : new Date(), await kodeUnik(ctx.uid || "anon", ctx.id || "x"));
+}
+
 /* ---------- membuat PDF per siswa ---------- */
-export async function buatPdf(t, nama) {
+export async function buatPdf(t, nama, noTeks = "") {
   const L = await pdfLib();
   const pdf = await L.PDFDocument.load(b64ToBytes(t.b64));
   for (let i = pdf.getPageCount() - 1; i > 0; i--) pdf.removePage(i);
@@ -76,10 +99,15 @@ export async function buatPdf(t, nama) {
   let size = Number(t.ukuran) || 40;
   while (size > 12 && font.widthOfTextAtSize(txt, size) > W * 0.86) size -= 1; // nama panjang: perkecil otomatis
   page.drawText(txt, { x: t.x * W - font.widthOfTextAtSize(txt, size) / 2, y: H * (1 - t.y) - size * 0.35, size, font, color: L.rgb(...hex(t.warna)) });
+  if (noTeks && t.no) {
+    const f2 = await pdf.embedFont(L.StandardFonts.Helvetica); let s2 = Number(t.no.ukuran) || 12;
+    while (s2 > 6 && f2.widthOfTextAtSize(noTeks, s2) > W * 0.9) s2 -= 0.5;
+    page.drawText(noTeks, { x: t.no.x * W - f2.widthOfTextAtSize(noTeks, s2) / 2, y: H * (1 - t.no.y) - s2 * 0.35, size: s2, font: f2, color: L.rgb(...hex(t.no.warna || "#374151")) });
+  }
   return new Blob([await pdf.save()], { type: "application/pdf" });
 }
-export async function unduh(t, nama, judul) {
-  const blob = await buatPdf(t, nama);
+export async function unduh(t, nama, judul, ctx) {
+  const blob = await buatPdf(t, nama, await nomor(t, ctx));
   const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(blob), download: `Sertifikat - ${judul || "DASPRO"}.pdf`.replace(/[\\/:*?"<>|]/g, "") });
   document.body.append(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 60000);
