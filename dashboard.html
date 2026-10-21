@@ -178,7 +178,7 @@ document.addEventListener("click", async (e) => {
   e.preventDefault(); e.stopPropagation();
   const x = [...tugas, ...kuis].find((i) => i.id === b.dataset.sert); if (!x || !layak(x)) return;
   const label = b.textContent; b.disabled = true; b.textContent = "Membuat PDF...";
-  try { await SC.unduh(await SC.ambilTemplate(x.sertif.tid), profile?.nama || "Siswa", x.judul); toast("Sertifikat diunduh"); }
+  try { const cs = subs[x.id]?.createdAt; await SC.unduh(await SC.ambilTemplate(x.sertif.tid), profile?.nama || "Siswa", x.judul, { uid: user.uid, id: x.id, tgl: cs?.seconds ? new Date(cs.seconds * 1000) : cs?.toDate ? cs.toDate() : new Date() }); toast("Sertifikat diunduh"); }
   catch (er) { alert("Gagal membuat sertifikat: " + er.message); }
   b.disabled = false; b.textContent = label;
 }, true);
