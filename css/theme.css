@@ -175,3 +175,15 @@ a.fchip:hover{border-color:var(--b2);background:var(--soft);transform:translateY
 .seg{display:flex;gap:6px;margin-top:12px}
 .seg button{flex:1;padding:9px 10px;border-radius:10px;border:1.5px solid var(--line);background:#fff;font-weight:700;font-size:.82rem;cursor:pointer;color:var(--mute);transition:.2s}
 .seg button.on{background:var(--soft);border-color:var(--b2);color:var(--brand)}
+
+.spv{touch-action:none;user-select:none;-webkit-user-select:none}.spv:focus{outline:none}.spv:focus-visible{box-shadow:0 0 0 3px rgba(79,70,229,.35)}
+.spv #ceNm,.spv #ceNo{cursor:move}
+.gl{position:absolute;pointer-events:none;z-index:1}
+.gl.gv{left:50%;top:0;bottom:0;border-left:1px dashed rgba(220,38,38,.55)}
+.gl.gv.snap{border-left:2px solid rgba(220,38,38,.9)}
+.gl.gh{left:0;right:0;border-top:1px dashed rgba(220,38,38,.45)}
+.tb{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px}
+.tb .nud{display:inline-flex;gap:4px}
+.tb .nud button{width:34px;height:32px;border-radius:9px;border:1.5px solid var(--line);background:#fff;cursor:pointer;font-size:.72rem;color:var(--brand)}
+.tb .nud button:hover{background:var(--soft)}
+.tb .gchk{display:flex;gap:6px;align-items:center;font-size:.8rem;color:var(--mute);margin-left:auto;font-weight:600}
