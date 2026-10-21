@@ -160,3 +160,13 @@ a.fchip:hover{border-color:var(--b2);background:var(--soft);transform:translateY
 .pfc span{font-size:.76rem;font-weight:600;padding:4px 11px;border-radius:99px;background:var(--bg);color:var(--mute);max-width:100%;overflow:hidden;text-overflow:ellipsis}
 .pf .pfup{display:inline-flex;justify-content:center;margin:20px 0 0;padding:9px 18px;border:1.5px dashed var(--b2);border-radius:12px;color:var(--brand);background:var(--soft);cursor:pointer;font-size:.85rem;transition:.2s}
 .pf .pfup:hover{background:#fff;transform:translateY(-1px)}
+
+
+/* ===== Sertifikat ===== */
+.tag.gold{background:#FFF4D6;color:#8A5A00}
+.btn.gold{background:linear-gradient(135deg,#F5B83D,#E8890C);color:#fff;border:0;box-shadow:0 8px 18px -8px #E8890C;white-space:nowrap}
+.btn.gold:hover{transform:translateY(-1px)}
+.rt{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.spv{position:relative;margin-top:14px;border:1px solid var(--line);border-radius:12px;overflow:hidden;cursor:crosshair;line-height:0;background:#fff}
+.spv canvas{width:100%;height:auto;display:block}
+#ceNm{position:absolute;transform:translate(-50%,-50%);white-space:nowrap;pointer-events:none;line-height:1.1;outline:1.5px dashed rgba(79,70,229,.7);outline-offset:5px}
