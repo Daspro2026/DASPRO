@@ -91,6 +91,7 @@ dialog{border:0;border-radius:22px;max-width:580px;width:calc(100% - 32px);paddi
 <script type="module">
 import { auth, db, collection, getDocs, getDoc, query, where, orderBy, doc, setDoc, updateDoc, serverTimestamp } from "./js/firebase.js";
 import { pasangGantiSandi } from "./js/reset.js";
+import * as SC from "./js/sertifikat.js";
 import { guard, esc, $, safeUrl, fdate, icon, toast, UPLOAD, fileOk, mimeOf, fmtSize, fileChips, isImg, kecilkan, toB64 } from "./js/common.js";
 
 const views = {};
@@ -115,7 +116,7 @@ const status = (id) => { const s = subs[id]; return !s ? '<span class="tag warn"
 const mCard = (m) => `<div class="card mat"><div class="row"><div class="fi">${icon(m.tipe === "modul" ? "book" : "file")}</div><span class="tag">${esc(m.tipe)}</span></div>
   <div><h2>${esc(m.judul)}</h2></div><p class="mute sm">${esc(m.deskripsi || "")}</p>
   <div style="display:flex;gap:8px;flex-wrap:wrap">${linkBtns(m)}</div></div>`;
-const tItem = (t) => `<li><a href="#" data-id="${t.id}" class="row"><div class="fi">${icon("task")}</div><div><b>${esc(t.judul)}</b><div class="mute sm">${t.deadline ? "Tenggat " + fdate(t.deadline) : "Tanpa tenggat"}</div></div></a>${status(t.id)}</li>`;
+const tItem = (t) => `<li><a href="#" data-id="${t.id}" class="row"><div class="fi">${icon("task")}</div><div><b>${esc(t.judul)}</b><div class="mute sm">${t.deadline ? "Tenggat " + fdate(t.deadline) : "Tanpa tenggat"}</div></div></a><span class="rt">${status(t.id)}${sertTag(t)}</span></li>`;
 const bind = (root) => document.querySelectorAll(root + " a[data-id]").forEach((a) => (a.onclick = (e) => { e.preventDefault(); buka(a.dataset.id); }));
 const kosong = (t) => `<div class="empty">${t}</div>`;
 
@@ -164,6 +165,23 @@ let timerKuis = null;
 const reviewHtml = (rv) => (rv || []).map((q, i) => `<div class="ans" style="margin-top:10px"><b>${i + 1}. ${esc(q.teks)}</b>
   <div class="sm" style="margin-top:6px">Jawaban Anda: ${esc(q.j || "-")} ${q.ok === true ? '<span class="tag ok">Benar</span>' : q.ok === false ? '<span class="tag warn">Salah</span>' : ""}</div>
   ${q.kunci ? `<div class="sm mute">Kunci: ${esc(q.kunci)}</div>` : ""}${q.pembahasan ? `<div class="sm" style="margin-top:6px">${esc(q.pembahasan)}</div>` : ""}</div>`).join("");
+/* Sertifikat: tombol muncul hanya bila guru mengaktifkannya dan nilai siswa memenuhi syarat */
+const layak = (x) => { const s = subs[x.id]; return !!(x.sertif?.tid && s && s.status === "selesai" && Number(s.nilai) >= (Number(x.sertif.min) || 0)); };
+const sertTag = (x) => {
+  if (!x.sertif?.tid) return "";
+  if (layak(x)) return `<button type="button" class="btn sm gold" data-sert="${esc(x.id)}">Unduh sertifikat</button>`;
+  const min = Number(x.sertif.min) || 0;
+  return `<span class="tag gold">${subs[x.id]?.status === "selesai" && min ? "Sertifikat: min. nilai " + min : "Ada sertifikat"}</span>`;
+};
+document.addEventListener("click", async (e) => {
+  const b = e.target.closest("[data-sert]"); if (!b) return;
+  e.preventDefault(); e.stopPropagation();
+  const x = [...tugas, ...kuis].find((i) => i.id === b.dataset.sert); if (!x || !layak(x)) return;
+  const label = b.textContent; b.disabled = true; b.textContent = "Membuat PDF...";
+  try { await SC.unduh(await SC.ambilTemplate(x.sertif.tid), profile?.nama || "Siswa", x.judul); toast("Sertifikat diunduh"); }
+  catch (er) { alert("Gagal membuat sertifikat: " + er.message); }
+  b.disabled = false; b.textContent = label;
+}, true);
 const kItem = (k) => {
   const s = subs[k.id], now = Date.now(), maks = Number(k.maks) || 1;
   let tag;
@@ -172,7 +190,7 @@ const kItem = (k) => {
   else if (k.tutup && now > k.tutup) tag = '<span class="tag">Ditutup</span>';
   else tag = '<span class="tag warn">Belum dikerjakan</span>';
   const info = [`${(k.soal || []).length} soal`, k.durasi ? k.durasi + " menit" : "", maks > 1 ? maks + "x percobaan" : ""].filter(Boolean).join(" · ");
-  return `<li><a href="#" data-k="${k.id}" class="row"><div class="fi">${icon("edit")}</div><div><b>${esc(k.judul)}</b><div class="mute sm">${info}${k.deskripsi ? " · " + esc(k.deskripsi) : ""}</div></div></a>${tag}</li>`;
+  return `<li><a href="#" data-k="${k.id}" class="row"><div class="fi">${icon("edit")}</div><div><b>${esc(k.judul)}</b><div class="mute sm">${info}${k.deskripsi ? " · " + esc(k.deskripsi) : ""}</div></div></a><span class="rt">${tag}${sertTag(k)}</span></li>`;
 };
 
 views.beranda = () => {
@@ -214,7 +232,7 @@ function renderDetail() {
 }
 views.nilai = () => {
   const r = Object.entries(subs).filter(([, s]) => s.status === "selesai");
-  $("#nilaiTbl").innerHTML = r.length ? `<table><tr><th>Mapel</th><th>Tugas / kuis</th><th>Nilai</th><th>Umpan balik</th></tr>${r.map(([id, s]) => { const src = [...tugas, ...kuis].find((x) => x.id === id); return `<tr><td>${esc(src ? namaMapel(src) : "Umum")}</td><td><b>${esc(s.tugasJudul)}</b></td><td><span class="tag ok">${esc(s.nilai)}</span></td><td class="mute">${esc(s.feedback || "-")}</td></tr>`; }).join("")}</table>` : kosong("Belum ada nilai.");
+  $("#nilaiTbl").innerHTML = r.length ? `<table><tr><th>Mapel</th><th>Tugas / kuis</th><th>Nilai</th><th>Umpan balik</th><th>Sertifikat</th></tr>${r.map(([id, s]) => { const src = [...tugas, ...kuis].find((x) => x.id === id); return `<tr><td>${esc(src ? namaMapel(src) : "Umum")}</td><td><b>${esc(s.tugasJudul)}</b></td><td><span class="tag ok">${esc(s.nilai)}</span></td><td class="mute">${esc(s.feedback || "-")}</td><td>${src ? sertTag(src) : ""}</td></tr>`; }).join("")}</table>` : kosong("Belum ada nilai.");
 };
 $("#tutup").onclick = () => $("#dlg").close();
 $("#dlg").addEventListener("close", () => clearInterval(timerKuis));
