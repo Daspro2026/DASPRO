@@ -44,6 +44,8 @@ service cloud.firestore {
     match /kuis/{id}   { allow read: if aktif(); allow write: if isAdmin(); }
     // Kunci jawaban: HANYA admin. Siswa tidak bisa membaca sama sekali.
     match /kunci/{id}  { allow read, write: if isAdmin(); }
+    match /sertifikat/{id}     { allow read: if aktif(); allow write: if isAdmin(); }
+    match /sertifikatData/{id} { allow read: if aktif(); allow write: if isAdmin(); }
     // File jawaban siswa (maks ~700 KB, disimpan sebagai teks base64). Hanya pemilik & guru yang boleh membaca.
     match /berkas/{id} {
       allow create: if aktif() && request.resource.data.siswaId == request.auth.uid
