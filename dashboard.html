@@ -65,8 +65,11 @@ dialog{border:0;border-radius:22px;max-width:580px;width:calc(100% - 32px);paddi
 <div class="app"><main class="main">
   <section id="beranda"><div class="banner"><h1 id="sapa"></h1><p id="sub">Berikut ringkasan belajar Anda hari ini.</p></div>
     <div id="hint"></div><div class="grid g3" id="stat"></div>
+    <div id="pgMini"></div>
     <div class="sec"><h2>Perlu dikerjakan</h2></div><div class="card"><ul class="list" id="tugasMini"></ul></div>
     <div class="sec"><h2>Mata pelajaran</h2></div><div class="grid gm" id="materiMini"></div></section>
+  <section id="pengumuman" class="hide"><div class="ph"><div><h1>Pengumuman</h1><p>Informasi dari guru dan pengingat tenggat tugas.</p></div></div>
+    <div id="pgRem"></div><div id="pgList"></div></section>
   <section id="mapel" class="hide"><div class="ph"><div><h1>Mata pelajaran</h1><p>Pilih mata pelajaran untuk melihat materi, tugas, dan kuisnya.</p></div></div><div class="grid gm" id="mapelAll"></div></section>
   <section id="detail" class="hide"><button class="btn ghost sm" id="dBack" style="margin-bottom:16px">&larr; Semua mata pelajaran</button>
     <div class="ph"><div><h1 id="dNama"></h1><p>Materi, tugas, dan kuis mata pelajaran ini.</p><div id="dGuru" style="margin-top:12px"></div></div></div>
@@ -95,7 +98,7 @@ import * as SC from "./js/sertifikat.js";
 import { guard, esc, $, safeUrl, fdate, icon, toast, UPLOAD, fileOk, mimeOf, fmtSize, fileChips, isImg, kecilkan, toB64 } from "./js/common.js";
 
 const views = {};
-const { user, profile, show } = await guard(false, [["beranda", "Beranda", "home"], ["mapel", "Mata pelajaran", "book"], ["nilai", "Nilai", "star"], ["profil", "Profil", "users"]], views);
+const { user, profile, show } = await guard(false, [["beranda", "Beranda", "home"], ["pengumuman", "Pengumuman", "clock"], ["mapel", "Mata pelajaran", "book"], ["nilai", "Nilai", "star"], ["profil", "Profil", "users"]], views);
 const fetchAll = async (c) => (await getDocs(query(collection(db, c), orderBy("createdAt", "desc")))).docs.map((d) => ({ id: d.id, ...d.data() }));
 // Hemat kuota: daftar materi/tugas/kuis/mapel disimpan di browser dan hanya diunduh ulang jika guru mengubah isi (meta/versi).
 let ver = null;
@@ -193,7 +196,51 @@ const kItem = (k) => {
   return `<li><a href="#" data-k="${k.id}" class="row"><div class="fi">${icon("edit")}</div><div><b>${esc(k.judul)}</b><div class="mute sm">${info}${k.deskripsi ? " · " + esc(k.deskripsi) : ""}</div></div></a><span class="rt">${tag}${sertTag(k)}</span></li>`;
 };
 
+/* ===== Pengumuman & notifikasi ===== */
+let pgData = [];
+try { pgData = (await getDocs(collection(db, "pengumuman"))).docs.map((x) => ({ id: x.id, ...x.data() })); } catch {}
+const pgLihat = () => pgData.filter((p) => !p.kelasId || p.kelasId === profile.kelasId)
+  .sort((p, q) => (q.penting ? 1 : 0) - (p.penting ? 1 : 0) || (q.createdAt?.seconds || 0) - (p.createdAt?.seconds || 0));
+const pgKey = "daspro_pg_" + user.uid;
+const pgSeen = () => { try { return Number(localStorage.getItem(pgKey) || 0); } catch { return 0; } };
+const pgBaru = () => pgLihat().filter((p) => (p.createdAt?.seconds || 0) > pgSeen());
+const pgTgl = (t) => (t?.seconds ? new Date(t.seconds * 1000).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }) : "");
+function pgBadge() {
+  const b = document.querySelector('.side nav button[data-t="pengumuman"]'); if (!b) return;
+  b.querySelector(".nb")?.remove();
+  const n = pgBaru().length; if (n) b.insertAdjacentHTML("beforeend", `<span class="tag warn nb" style="margin-left:auto;padding:2px 8px">${n}</span>`);
+}
+const pgItem = (p, mini) => {
+  const isi = String(p.isi || ""), baru = (p.createdAt?.seconds || 0) > pgSeen();
+  return `<div class="card pgc${p.penting ? " penting" : ""}"><div class="pgh"><b>${esc(p.judul)}</b>${p.penting ? '<span class="tag warn">Penting</span>' : ""}${baru ? '<span class="tag ok">Baru</span>' : ""}</div><p class="pgt">${esc(mini && isi.length > 160 ? isi.slice(0, 160) + "..." : isi)}</p><div class="mute sm">${p.kelasId ? "Untuk kelas " + esc(kelasNama(p.kelasId)) : "Untuk semua kelas"} · ${pgTgl(p.createdAt)}</div></div>`;
+};
+// tugas yang belum dikumpulkan dan tenggatnya 3 hari lagi atau sudah lewat
+const tenggat = () => tugas.filter((t) => t.deadline && !subs[t.id])
+  .map((t) => ({ t, sisa: Math.round((new Date(t.deadline + "T00:00:00") - new Date(new Date().toDateString())) / 864e5) })).filter((x) => x.sisa <= 3).sort((x, y) => x.sisa - y.sisa);
+function pgMini() {
+  const v = pgLihat().slice(0, 3);
+  $("#pgMini").innerHTML = v.length ? `<div class="sec"><h2>Pengumuman</h2></div>${v.map((p) => pgItem(p, true)).join("")}<p style="margin:-4px 0 6px"><a href="#" id="pgSemua" style="font-weight:700">Lihat semua pengumuman</a></p>` : "";
+  $("#pgSemua")?.addEventListener("click", (e) => { e.preventDefault(); show("pengumuman"); });
+}
+views.pengumuman = () => {
+  const tg = tenggat();
+  $("#pgRem").innerHTML = tg.length ? `<div class="card" style="margin-bottom:18px"><h2>Pengingat tenggat</h2><ul class="list" style="margin-top:8px">${tg.map(({ t, sisa }) => `<li><div class="row"><div class="fi">${icon("task")}</div><div><b>${esc(t.judul)}</b><div class="mute sm">${esc(namaMapel(t))} · Tenggat ${fdate(t.deadline)}</div></div></div><span class="tag ${sisa < 0 ? "bad" : "warn"}">${sisa < 0 ? "Lewat " + -sisa + " hari" : sisa === 0 ? "Hari ini" : sisa + " hari lagi"}</span></li>`).join("")}</ul></div>` : "";
+  $("#pgList").innerHTML = pgLihat().map((p) => pgItem(p)).join("") || kosong("Belum ada pengumuman dari guru.");
+  try { localStorage.setItem(pgKey, String(Math.max(0, ...pgLihat().map((p) => p.createdAt?.seconds || 0)))); } catch {}
+  pgBadge();
+};
+{ // ikon lonceng di menu, tanda angka, dan pemberitahuan sekali per sesi
+  const ic = document.querySelector('.side nav [data-t="pengumuman"] span');
+  if (ic) { ic.removeAttribute("data-ic"); ic.innerHTML = '<svg class="i" viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>'; }
+  pgBadge();
+  setTimeout(() => {
+    if (sessionStorage.getItem("pg_toast")) return; sessionStorage.setItem("pg_toast", "1");
+    const m = [pgBaru().length && pgBaru().length + " pengumuman baru", tenggat().filter((x) => x.sisa >= 0).length && tenggat().filter((x) => x.sisa >= 0).length + " tugas hampir tenggat"].filter(Boolean).join(" · ");
+    if (m) toast(m);
+  }, 900);
+}
 views.beranda = () => {
+  pgMini();
   $("#sapa").textContent = "Halo, " + (profile.nama || "Siswa").split(" ")[0];
   $("#sub").textContent = (kelasNama(profile.kelasId) ? "Kelas " + kelasNama(profile.kelasId) + " · " : "") + "Berikut ringkasan belajar Anda hari ini.";
   $("#hint").innerHTML = !profile.kelasId && kelasList.length ? `<div class="card" style="margin-bottom:18px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><span>Lengkapi profil Anda dan <b>pilih kelas</b> agar guru dapat melihat nilai Anda per kelas.</span><button class="btn sm" id="hintBtn">Buka profil</button></div>` : "";
