@@ -197,6 +197,15 @@ dialog{border:0;border-radius:22px;max-width:580px;width:calc(100% - 32px);paddi
       <button class="btn full">Simpan profil</button></form>
   </div></section>
 
+<section id="siswa" class="hide"><div class="ph"><div><h1>Siswa</h1><p>Daftar siswa per kelas. Hapus akun siswa yang sudah keluar dari sekolah langsung dari sini.</p></div></div>
+  <div class="sisbar"><select id="sisKelas" style="width:auto;min-width:200px"></select><input id="sisCari" placeholder="Cari nama, NIS, atau email" style="flex:1;min-width:200px"><span class="tag" id="sisJml"></span></div>
+  <div id="sisList"></div>
+  <dialog id="sisDlg"><h2 style="color:var(--bad)">Hapus akun siswa?</h2>
+    <p id="sisInfo" style="margin-top:10px"></p>
+    <p class="mute sm" style="margin-top:12px">Yang ikut terhapus permanen: akun login, profil, semua nilai, jawaban tugas, berkas, dan data percobaan kuis siswa ini. Siswa tidak bisa masuk lagi dan tindakan ini tidak bisa dibatalkan. Catat nilainya dulu bila masih diperlukan.</p>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px"><button type="button" class="btn ghost" id="sisBatal">Batal</button><button type="button" class="btn" id="sisOk" style="background:var(--bad)">Hapus akun</button></div></dialog>
+</section>
+
 <section id="sertif" class="hide"><div class="ph"><div><h1>Sertifikat</h1><p>Unggah template PDF 1 halaman, klik pratinjau untuk menentukan posisi nama. Lalu aktifkan sertifikat di kuis atau tugas yang Anda pilih.</p></div></div>
   <div class="grid gk" style="align-items:start">
     <div class="card"><h2 id="ceHead">Template baru</h2>
@@ -229,13 +238,13 @@ dialog{border:0;border-radius:22px;max-width:580px;width:calc(100% - 32px);paddi
   </div></section>
 </main></div>
 <script type="module">
-import { db, storage, collection, getDocs, addDoc, deleteDoc, updateDoc, doc, query, orderBy, serverTimestamp, ref, uploadBytes, getDownloadURL, setDoc, getDoc, where } from "./js/firebase.js";
+import { DEMO, auth, db, storage, collection, getDocs, addDoc, deleteDoc, updateDoc, doc, query, orderBy, serverTimestamp, ref, uploadBytes, getDownloadURL, setDoc, getDoc, where } from "./js/firebase.js";
 import { pasangGantiSandi } from "./js/reset.js";
 import * as SC from "./js/sertifikat.js";
 import { guard, esc, $, ago, icon, toast, applySettings, safeUrl, fileChips } from "./js/common.js";
 
 const views = {};
-const { show, user: akun, profile: akunProfil } = await guard(true, [["ringkasan", "Ringkasan", "grid"], ["mapel", "Mata pelajaran", "book"], ["kelas", "Kelas", "users"], ["daftar", "Pendaftaran", "key"], ["konten", "Materi & Tugas", "upload"], ["kuis", "Kuis", "edit"], ["sertif", "Sertifikat", "star"], ["periksa", "Periksa", "check"], ["nilaiS", "Rekap nilai", "star"], ["analitik", "Analitik", "chart"], ["profilG", "Profil", "users"], ["setelan", "Pengaturan", "sliders"]], views);
+const { show, user: akun, profile: akunProfil } = await guard(true, [["ringkasan", "Ringkasan", "grid"], ["mapel", "Mata pelajaran", "book"], ["kelas", "Kelas", "users"], ["siswa", "Siswa", "users"], ["daftar", "Pendaftaran", "key"], ["konten", "Materi & Tugas", "upload"], ["kuis", "Kuis", "edit"], ["sertif", "Sertifikat", "star"], ["periksa", "Periksa", "check"], ["nilaiS", "Rekap nilai", "star"], ["analitik", "Analitik", "chart"], ["profilG", "Profil", "users"], ["setelan", "Pengaturan", "sliders"]], views);
 const all = async (c) => (await getDocs(collection(db, c))).docs.map((d) => ({ id: d.id, ...d.data() }));
 const kosong = (t) => `<div class="empty">${t}</div>`;
 $("#keP").onclick = () => show("periksa");
@@ -245,6 +254,8 @@ $("#keP").onclick = () => show("periksa");
   Object.entries(G).forEach(([t, l]) => document.querySelector(`.side nav [data-t="${t}"]`)?.insertAdjacentHTML("beforebegin", `<div class="nl">${l}</div>`));
   const ic = document.querySelector('.side nav [data-t="profilG"] span');
   if (ic) { ic.removeAttribute("data-ic"); ic.innerHTML = '<svg class="i" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 11a4 4 0 100-8 4 4 0 000 8z"/></svg>'; }
+  const ic3 = document.querySelector('.side nav [data-t="siswa"] span');
+  if (ic3) { ic3.removeAttribute("data-ic"); ic3.innerHTML = '<svg class="i" viewBox="0 0 24 24"><path d="M22 10L12 5 2 10l10 5 10-5zM6 12v5c3 3 9 3 12 0v-5"/></svg>'; }
   const ic2 = document.querySelector('.side nav [data-t="sertif"] span');
   if (ic2) { ic2.removeAttribute("data-ic"); ic2.innerHTML = '<svg class="i" viewBox="0 0 24 24"><path d="M12 15a7 7 0 100-14 7 7 0 000 14zM8.21 13.89L7 23l5-3 5 3-1.21-9.12"/></svg>'; }
   const me = document.querySelector(".me");
@@ -830,6 +841,52 @@ $("#setForm").onsubmit = async (e) => {
     localStorage.setItem("daspro_set", JSON.stringify(cur)); toast("Pengaturan tersimpan");
   } catch (er) { alert("Gagal menyimpan. Pastikan firestore.rules terbaru sudah di-Publish di Firebase.\n" + er.message); }
 };
+/* ===== Daftar siswa per kelas + hapus akun ===== */
+let sisAll = [], sisTarget = null;
+const sisNama = (u) => u.nama || u.email || "(tanpa nama)";
+function paintSiswa() {
+  const f = $("#sisKelas").value, q = $("#sisCari").value.trim().toLowerCase();
+  const adaKelas = (u) => kelasAll.some((k) => k.id === u.kelasId);
+  const cocok = sisAll.filter((u) => (f === "" || (f === "_none" ? !adaKelas(u) : u.kelasId === f)) && (!q || [u.nama, u.email, u.nis].some((x) => String(x || "").toLowerCase().includes(q))));
+  const grup = [...kelasAll.map((k) => ({ nama: k.nama, daftar: cocok.filter((u) => u.kelasId === k.id) })), { nama: "Tanpa kelas", daftar: cocok.filter((u) => !adaKelas(u)) }].filter((g) => g.daftar.length);
+  $("#sisJml").textContent = cocok.length + " siswa";
+  const stat = { menunggu: "Menunggu persetujuan", ditolak: "Ditolak" };
+  $("#sisList").innerHTML = grup.map((g) => `<div class="card" style="margin-bottom:16px"><div class="gh2"><h2>${esc(g.nama)}</h2><span class="tag">${g.daftar.length} siswa</span></div><ul class="list">${g.daftar.sort((x, y) => sisNama(x).localeCompare(sisNama(y), "id")).map((u) => `<li><div class="row"><div class="av" style="overflow:hidden">${avHtml(u.foto, sisNama(u))}</div><div><b>${esc(sisNama(u))}</b>${stat[u.status] ? ` <span class="tag" style="background:#FFF4D6;color:#8A5A00">${stat[u.status]}</span>` : ""}<div class="mute sm">${[u.nis && "NIS " + esc(u.nis), esc(u.email || "")].filter(Boolean).join(" · ")}</div></div></div><button class="btn ghost sm" data-del="${u.id}" style="color:var(--bad)">${icon("trash")} Hapus</button></li>`).join("")}</ul></div>`).join("") || `<div class="card">${kosong(sisAll.length ? "Tidak ada siswa yang cocok dengan pencarian." : "Belum ada siswa yang mendaftar.")}</div>`;
+}
+views.siswa = async () => {
+  await loadKelas();
+  sisAll = (await getDocs(query(collection(db, "users"), where("role", "==", "siswa")))).docs.map((d) => ({ id: d.id, ...d.data() }));
+  const v = $("#sisKelas").value;
+  $("#sisKelas").innerHTML = opt("", "Semua kelas") + kelasAll.map((k) => opt(k.id, k.nama)).join("") + opt("_none", "Tanpa kelas");
+  if ([...$("#sisKelas").options].some((o) => o.value === v)) $("#sisKelas").value = v;
+  paintSiswa();
+};
+$("#sisKelas").onchange = paintSiswa; $("#sisCari").oninput = paintSiswa;
+$("#sisList").onclick = (e) => {
+  const b = e.target.closest("[data-del]"); if (!b) return;
+  sisTarget = sisAll.find((u) => u.id === b.dataset.del); if (!sisTarget) return;
+  $("#sisInfo").innerHTML = `Anda akan menghapus akun <b>${esc(sisNama(sisTarget))}</b> (${esc(kelasNama(sisTarget.kelasId))}).`;
+  $("#sisDlg").showModal();
+};
+$("#sisBatal").onclick = () => $("#sisDlg").close();
+async function hapusAkunSiswa(u) {
+  if (DEMO) { // mode demo: tanpa server
+    for (const c of ["submissions", "berkas"]) for (const d of (await getDocs(query(collection(db, c), where("siswaId", "==", u.id)))).docs) await deleteDoc(doc(db, c, d.id));
+    return deleteDoc(doc(db, "users", u.id));
+  }
+  const r = await fetch("/api/hapus-siswa", { method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + (await auth.currentUser.getIdToken()) }, body: JSON.stringify({ uid: u.id }) });
+  const j = await r.json().catch(() => ({}));
+  if (r.status === 404) throw new Error("Fungsi server belum terpasang. Pastikan file hapus-siswa.js ada di folder api/ di GitHub, lalu deploy ulang di Vercel.");
+  if (!r.ok) throw new Error(j.error || "Gagal menghapus akun (kode " + r.status + ").");
+}
+$("#sisOk").onclick = async () => {
+  if (!sisTarget) return;
+  const btn = $("#sisOk"), u = sisTarget; btn.disabled = true; btn.textContent = "Menghapus...";
+  try { await hapusAkunSiswa(u); $("#sisDlg").close(); toast("Akun " + sisNama(u) + " dihapus"); views.siswa(); }
+  catch (er) { alert("Gagal menghapus: " + er.message); }
+  btn.disabled = false; btn.textContent = "Hapus akun";
+};
+
 /* ===== Sertifikat PDF otomatis ===== */
 let sertAll = [], sc = null;
 const fillSert = () => {
