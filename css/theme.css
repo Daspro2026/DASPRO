@@ -191,3 +191,10 @@ a.fchip:hover{border-color:var(--b2);background:var(--soft);transform:translateY
 /* ===== Daftar siswa ===== */
 .sisbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:18px}
 .gh2{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px}
+
+/* ===== Pengumuman ===== */
+.pgc{margin-bottom:14px}.pgc.penting{border-left:4px solid #F59E0B}
+.pgh{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px}.pgh b{font-size:1.02rem}
+.pgt{white-space:pre-wrap;word-break:break-word;margin:0 0 8px;color:var(--ink);line-height:1.55}
+.pgw{white-space:pre-wrap;word-break:break-word}
+.tag.bad{background:#FDE8E8;color:#B42318}
