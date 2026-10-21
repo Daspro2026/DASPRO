@@ -398,10 +398,12 @@ $("#rJenis").onchange = () => views.nilaiS();
 const bump = () => setDoc(doc(db, "meta", "versi"), { t: Date.now() }).catch(() => {});
 let rekapCache = null;
 const pending = async () => (await getDocs(query(collection(db, "submissions"), where("status", "==", "belum_diperiksa")))).docs.map((d) => ({ id: d.id, ...d.data() }));
+// Jumlah siswa disimpan sementara (5 menit) agar hemat pembacaan Firestore; diperbarui setiap daftar siswa berubah.
+const ubahJmlSiswa = (n) => { try { localStorage.setItem("daspro_siswa", JSON.stringify({ n, at: Date.now() })); } catch {} };
 const jumlahSiswa = async () => {
-  try { const x = JSON.parse(localStorage.getItem("daspro_siswa") || "null"); if (x && Date.now() - x.at < 36e5) return x.n; } catch {}
+  try { const x = JSON.parse(localStorage.getItem("daspro_siswa") || "null"); if (x && Date.now() - x.at < 3e5) return x.n; } catch {}
   const n = (await getDocs(query(collection(db, "users"), where("role", "==", "siswa")))).size;
-  try { localStorage.setItem("daspro_siswa", JSON.stringify({ n, at: Date.now() })); } catch {}
+  ubahJmlSiswa(n);
   return n;
 };
 
@@ -856,6 +858,7 @@ function paintSiswa() {
 views.siswa = async () => {
   await loadKelas();
   sisAll = (await getDocs(query(collection(db, "users"), where("role", "==", "siswa")))).docs.map((d) => ({ id: d.id, ...d.data() }));
+  ubahJmlSiswa(sisAll.length);
   const v = $("#sisKelas").value;
   $("#sisKelas").innerHTML = opt("", "Semua kelas") + kelasAll.map((k) => opt(k.id, k.nama)).join("") + opt("_none", "Tanpa kelas");
   if ([...$("#sisKelas").options].some((o) => o.value === v)) $("#sisKelas").value = v;
