@@ -170,3 +170,8 @@ a.fchip:hover{border-color:var(--b2);background:var(--soft);transform:translateY
 .spv{position:relative;margin-top:14px;border:1px solid var(--line);border-radius:12px;overflow:hidden;cursor:crosshair;line-height:0;background:#fff}
 .spv canvas{width:100%;height:auto;display:block}
 #ceNm{position:absolute;transform:translate(-50%,-50%);white-space:nowrap;pointer-events:none;line-height:1.1;outline:1.5px dashed rgba(79,70,229,.7);outline-offset:5px}
+
+#ceNo{position:absolute;transform:translate(-50%,-50%);white-space:nowrap;pointer-events:none;line-height:1.1;font-family:Arial,Helvetica,sans-serif;outline:1.5px dashed rgba(234,138,12,.85);outline-offset:4px}
+.seg{display:flex;gap:6px;margin-top:12px}
+.seg button{flex:1;padding:9px 10px;border-radius:10px;border:1.5px solid var(--line);background:#fff;font-weight:700;font-size:.82rem;cursor:pointer;color:var(--mute);transition:.2s}
+.seg button.on{background:var(--soft);border-color:var(--b2);color:var(--brand)}
