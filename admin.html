@@ -106,6 +106,9 @@ dialog{border:0;border-radius:22px;max-width:580px;width:calc(100% - 32px);paddi
       <label>Judul</label><input id="judul" required placeholder="Contoh: Modul 3 Perulangan">
       <label id="lDesk">Deskripsi</label><textarea id="desk"></textarea>
       <div id="wDead" class="hide"><label>Tenggat</label><input id="dead" type="date"></div>
+      <div id="wSertT" class="hide"><label>Sertifikat (opsional)</label>
+      <div class="grid g2" style="gap:12px"><div><select id="tSert"></select></div><div><input id="tSertMin" type="number" min="0" max="100" value="0" title="Nilai minimal"></div></div>
+      <p class="mute sm" style="margin-top:6px">Kolom kanan = nilai minimal (0 = cukup sudah dinilai). Template dikelola di menu Sertifikat.</p></div>
       <label>Tautan (boleh lebih dari satu)</label><textarea id="link" style="min-height:84px" placeholder="https://drive.google.com/...&#10;https://youtube.com/...&#10;https://canva.com/..."></textarea>
       <p class="mute sm" style="margin-top:6px">Tempel tautan dari mana saja: Google Drive, YouTube, Canva, Notion, OneDrive, GitHub, atau website lain. Satu tautan per baris. Pastikan akses file diatur &quot;siapa saja yang memiliki link&quot;.</p>
       <button class="btn full" id="simpan">Simpan</button>
@@ -145,6 +148,9 @@ dialog{border:0;border-radius:22px;max-width:580px;width:calc(100% - 32px);paddi
       <label>Pembahasan untuk siswa</label><select id="kBhs"><option value="tidak">Tidak ditampilkan</option><option value="selesai">Langsung setelah selesai</option><option value="tutup">Setelah kuis ditutup</option></select>
       <div id="soalBox"></div>
       <button type="button" class="btn ghost full" id="tambahSoal">+ Tambah soal</button>
+      <label>Sertifikat (opsional)</label>
+      <div class="grid g2" style="gap:12px"><div><select id="kSert"></select></div><div><input id="kSertMin" type="number" min="0" max="100" value="0" title="Nilai minimal"></div></div>
+      <p class="mute sm" style="margin-top:6px">Kolom kanan = nilai minimal (0 = cukup sudah dinilai). Template dikelola di menu Sertifikat.</p>
       <button class="btn full" id="kSimpan">Simpan kuis</button>
       <button type="button" class="btn ghost full hide" id="kBatal" style="margin-top:8px">Batal edit</button></form>
     <div class="card"><h2>Kuis Anda</h2><ul class="list" id="kDaftar" style="margin-top:8px"></ul></div>
@@ -190,14 +196,33 @@ dialog{border:0;border-radius:22px;max-width:580px;width:calc(100% - 32px);paddi
       <label>Tentang saya</label><textarea id="gDesk" style="min-height:100px" placeholder="Pengalaman mengajar, motto, atau pesan untuk siswa"></textarea>
       <button class="btn full">Simpan profil</button></form>
   </div></section>
+
+<section id="sertif" class="hide"><div class="ph"><div><h1>Sertifikat</h1><p>Unggah template PDF 1 halaman, klik pratinjau untuk menentukan posisi nama. Lalu aktifkan sertifikat di kuis atau tugas yang Anda pilih.</p></div></div>
+  <div class="grid gk" style="align-items:start">
+    <div class="card"><h2 id="ceHead">Template baru</h2>
+      <label>Nama template</label><input id="ceNama" placeholder="Contoh: Sertifikat Kuis Algoritma">
+      <label>File template (PDF, 1 halaman)</label><input type="file" id="ceFile" accept="application/pdf,.pdf">
+      <div class="grid g2" style="gap:12px"><div><label>Jenis huruf</label><select id="ceFont"></select></div><div><label>Ukuran huruf</label><input id="ceUkuran" type="number" min="10" max="150" value="40"></div></div>
+      <div class="grid g2" style="gap:12px"><div><label>Warna nama</label><input id="ceWarna" type="color" value="#1f2937" style="height:46px;padding:4px"></div><div><label>Nama contoh</label><input id="ceContoh" value="Nama Siswa"></div></div>
+      <p class="mute sm" style="margin-top:10px">Klik pada pratinjau untuk menaruh nama. Nama akan rata tengah di titik itu.</p>
+      <button type="button" class="btn full" id="ceSimpan">Simpan template</button>
+      <button type="button" class="btn ghost full hide" id="ceBatal" style="margin-top:8px">Batal edit</button></div>
+    <div>
+      <div class="card"><h2>Pratinjau</h2>
+        <div id="ceKosong" class="empty" style="margin-top:12px">Unggah PDF template untuk melihat pratinjau.</div>
+        <div id="ceBox" class="spv hide"><canvas id="ceCv"></canvas><div id="ceNm"></div></div></div>
+      <div class="card" style="margin-top:18px"><h2>Template tersimpan</h2><ul class="list" id="ceDaftar" style="margin-top:8px"></ul></div>
+    </div>
+  </div></section>
 </main></div>
 <script type="module">
 import { db, storage, collection, getDocs, addDoc, deleteDoc, updateDoc, doc, query, orderBy, serverTimestamp, ref, uploadBytes, getDownloadURL, setDoc, getDoc, where } from "./js/firebase.js";
 import { pasangGantiSandi } from "./js/reset.js";
+import * as SC from "./js/sertifikat.js";
 import { guard, esc, $, ago, icon, toast, applySettings, safeUrl, fileChips } from "./js/common.js";
 
 const views = {};
-const { show, user: akun, profile: akunProfil } = await guard(true, [["ringkasan", "Ringkasan", "grid"], ["mapel", "Mata pelajaran", "book"], ["kelas", "Kelas", "users"], ["daftar", "Pendaftaran", "key"], ["konten", "Materi & Tugas", "upload"], ["kuis", "Kuis", "edit"], ["periksa", "Periksa", "check"], ["nilaiS", "Rekap nilai", "star"], ["analitik", "Analitik", "chart"], ["profilG", "Profil", "users"], ["setelan", "Pengaturan", "sliders"]], views);
+const { show, user: akun, profile: akunProfil } = await guard(true, [["ringkasan", "Ringkasan", "grid"], ["mapel", "Mata pelajaran", "book"], ["kelas", "Kelas", "users"], ["daftar", "Pendaftaran", "key"], ["konten", "Materi & Tugas", "upload"], ["kuis", "Kuis", "edit"], ["sertif", "Sertifikat", "star"], ["periksa", "Periksa", "check"], ["nilaiS", "Rekap nilai", "star"], ["analitik", "Analitik", "chart"], ["profilG", "Profil", "users"], ["setelan", "Pengaturan", "sliders"]], views);
 const all = async (c) => (await getDocs(collection(db, c))).docs.map((d) => ({ id: d.id, ...d.data() }));
 const kosong = (t) => `<div class="empty">${t}</div>`;
 $("#keP").onclick = () => show("periksa");
@@ -207,6 +232,8 @@ $("#keP").onclick = () => show("periksa");
   Object.entries(G).forEach(([t, l]) => document.querySelector(`.side nav [data-t="${t}"]`)?.insertAdjacentHTML("beforebegin", `<div class="nl">${l}</div>`));
   const ic = document.querySelector('.side nav [data-t="profilG"] span');
   if (ic) { ic.removeAttribute("data-ic"); ic.innerHTML = '<svg class="i" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 11a4 4 0 100-8 4 4 0 000 8z"/></svg>'; }
+  const ic2 = document.querySelector('.side nav [data-t="sertif"] span');
+  if (ic2) { ic2.removeAttribute("data-ic"); ic2.innerHTML = '<svg class="i" viewBox="0 0 24 24"><path d="M12 15a7 7 0 100-14 7 7 0 000 14zM8.21 13.89L7 23l5-3 5 3-1.21-9.12"/></svg>'; }
   const me = document.querySelector(".me");
   if (me) { me.classList.add("go"); me.title = "Buka profil"; me.onclick = (e) => { if (!e.target.closest("#keluar")) show("profilG"); }; }
 }
@@ -364,7 +391,7 @@ views.ringkasan = async () => {
 };
 
 /* Konten */
-$("#tipe").onchange = () => { const t = $("#tipe").value === "tugas"; $("#wDead").classList.toggle("hide", !t); $("#lDesk").textContent = t ? "Instruksi" : "Deskripsi"; };
+$("#tipe").onchange = () => { const t = $("#tipe").value === "tugas"; $("#wDead").classList.toggle("hide", !t); $("#wSertT").classList.toggle("hide", !t); $("#lDesk").textContent = t ? "Instruksi" : "Deskripsi"; };
 let kEdit = null;
 const setTipeOpsi = (col) => [...$("#tipe").options].forEach((o) => (o.disabled = col ? (col === "tugas" ? o.value !== "tugas" : o.value === "tugas") : false));
 function keluarKonten() {
@@ -377,7 +404,7 @@ function mulaiEditKonten(i) {
   kEdit = { col: i.col, id: i.id };
   setTipeOpsi(i.col);
   $("#tMapel").value = mOf(i.mapelId || ""); $("#tipe").value = i.col === "tugas" ? "tugas" : i.tipe || "materi"; $("#tipe").onchange();
-  $("#judul").value = i.judul || ""; $("#desk").value = (i.col === "tugas" ? i.instruksi : i.deskripsi) || ""; $("#dead").value = i.deadline || "";
+  $("#judul").value = i.judul || ""; $("#desk").value = (i.col === "tugas" ? i.instruksi : i.deskripsi) || ""; $("#dead").value = i.deadline || ""; sertSet("#tSert", "#tSertMin", i.sertif);
   $("#link").value = (Array.isArray(i.links) && i.links.length ? i.links : i.fileUrl ? [i.fileUrl] : []).join("\n");
   $("#cHead").textContent = i.col === "tugas" ? "Edit tugas" : "Edit materi"; $("#simpan").textContent = "Simpan perubahan";
   $("#cBatal").classList.remove("hide");
@@ -405,7 +432,7 @@ $("#form").onsubmit = async (e) => {
     if (links.some((u) => !/^https?:\/\//i.test(u))) throw new Error("Setiap tautan harus diawali http:// atau https://");
     const fileUrl = links[0] || "";
         const tipe = $("#tipe").value;
-    const dt = tipe === "tugas" ? { mapelId: $("#tMapel").value, judul: $("#judul").value.trim(), instruksi: $("#desk").value, deadline: $("#dead").value, fileUrl, links }
+    const dt = tipe === "tugas" ? { mapelId: $("#tMapel").value, judul: $("#judul").value.trim(), instruksi: $("#desk").value, deadline: $("#dead").value, fileUrl, links, sertif: sertVal("#tSert", "#tSertMin") }
       : { mapelId: $("#tMapel").value, judul: $("#judul").value.trim(), deskripsi: $("#desk").value, tipe, fileUrl, links };
     const diEdit = !!kEdit;
     if (diEdit) await updateDoc(doc(db, kEdit.col, kEdit.id), { ...dt, updatedAt: serverTimestamp() });
@@ -508,7 +535,7 @@ async function mulaiEdit(k) {
   const kunci = kn.kunci || {}, bhs = kn.pembahasan || {};
   editId = k.id;
   $("#kMapel").value = mOf(k.mapelId || ""); $("#kJudul").value = k.judul || ""; $("#kDesk").value = k.deskripsi || "";
-  $("#kDurasi").value = k.durasi || 0; $("#kMaks").value = k.maks || 1; $("#kBuka").value = dtLokal(k.buka); $("#kTutup").value = dtLokal(k.tutup);
+  $("#kDurasi").value = k.durasi || 0; $("#kMaks").value = k.maks || 1; $("#kBuka").value = dtLokal(k.buka); $("#kTutup").value = dtLokal(k.tutup); sertSet("#kSert", "#kSertMin", k.sertif);
   $("#kAcak").checked = !!k.acak; $("#kAcakOpsi").checked = !!k.acakOpsi; $("#kBhs").value = k.pembahasan || "tidak";
   soalList = (k.soal || []).map((q) => {
     const tipe = q.tipe || "pg", kk = kunci[q.id];
@@ -568,7 +595,7 @@ $("#kForm").onsubmit = async (e) => {
   try {
     await setDoc(doc(db, "kunci", id), { kunci, pembahasan: bhs });
     const data = { mapelId: $("#kMapel").value, judul: $("#kJudul").value.trim(), deskripsi: $("#kDesk").value.trim(), soal,
-      durasi: Math.max(0, Math.floor(Number($("#kDurasi").value) || 0)), maks, buka, tutup, acak: $("#kAcak").checked, acakOpsi: $("#kAcakOpsi").checked, pembahasan: bmode };
+      durasi: Math.max(0, Math.floor(Number($("#kDurasi").value) || 0)), maks, buka, tutup, acak: $("#kAcak").checked, acakOpsi: $("#kAcakOpsi").checked, pembahasan: bmode, sertif: sertVal("#kSert", "#kSertMin") };
     if (diEdit) await updateDoc(doc(db, "kuis", id), { ...data, updatedAt: serverTimestamp() });
     else await setDoc(doc(db, "kuis", id), { ...data, createdAt: serverTimestamp() });
     await bump(); keluarEdit(); toast(diEdit ? "Perubahan kuis tersimpan" : "Kuis tersimpan"); views.kuis();
@@ -790,6 +817,86 @@ $("#setForm").onsubmit = async (e) => {
     localStorage.setItem("daspro_set", JSON.stringify(cur)); toast("Pengaturan tersimpan");
   } catch (er) { alert("Gagal menyimpan. Pastikan firestore.rules terbaru sudah di-Publish di Firebase.\n" + er.message); }
 };
-loadMapel(); loadKelas();
+/* ===== Sertifikat PDF otomatis ===== */
+let sertAll = [], sc = null;
+const fillSert = () => {
+  const o = opt("", "Tanpa sertifikat") + sertAll.map((s) => opt(s.id, s.nama)).join("");
+  ["#tSert", "#kSert"].forEach((sel) => { const el = $(sel); const v = el.value; el.innerHTML = o; if ([...el.options].some((x) => x.value === v)) el.value = v; });
+};
+async function loadSert() { sertAll = (await all("sertifikat")).sort((x, y) => (x.createdAt?.seconds || 0) - (y.createdAt?.seconds || 0)); fillSert(); }
+function sertVal(s, m) { return $(s).value ? { tid: $(s).value, min: Math.min(100, Math.max(0, Number($(m).value) || 0)) } : null; }
+function sertSet(s, m, v) { $(s).value = v?.tid || ""; $(m).value = v?.min || 0; }
+
+$("#ceFont").innerHTML = Object.entries(SC.FONTS).map(([k, f]) => opt(k, f.label)).join("");
+let sPdf = null;
+function sPaint() {
+  const ada = !!sc?.b64;
+  $("#ceBox").classList.toggle("hide", !ada); $("#ceKosong").classList.toggle("hide", ada);
+  if (!ada) return;
+  sc.font = $("#ceFont").value; sc.ukuran = Number($("#ceUkuran").value) || 40; sc.warna = $("#ceWarna").value;
+  const f = SC.FONTS[sc.font], k = $("#ceCv").clientWidth / sPdf.W, n = $("#ceNm");
+  n.textContent = $("#ceContoh").value || "Nama Siswa";
+  Object.assign(n.style, { left: sc.x * 100 + "%", top: sc.y * 100 + "%", fontFamily: f.css, fontStyle: f.st, fontWeight: 700, fontSize: sc.ukuran * k + "px", color: sc.warna });
+}
+function sReset() {
+  sc = null; sPdf = null; $("#ceNama").value = ""; $("#ceFile").value = ""; $("#ceUkuran").value = 40; $("#ceWarna").value = "#1f2937"; $("#ceFont").value = "sans";
+  $("#ceHead").textContent = "Template baru"; $("#ceBatal").classList.add("hide"); sPaint();
+}
+$("#ceFile").onchange = async (e) => {
+  const f = e.target.files[0]; if (!f) return;
+  if (!/\.pdf$/i.test(f.name)) { alert("File harus berformat PDF."); e.target.value = ""; return; }
+  if (f.size > SC.MAKS) { alert("Ukuran PDF maksimal sekitar 1,9 MB. Kompres dulu (mis. di ilovepdf.com/compress_pdf) lalu unggah lagi."); e.target.value = ""; return; }
+  try {
+    const b64 = SC.bufToB64(await f.arrayBuffer());
+    const prev = sc;
+    sc = { ...(prev || { x: 0.5, y: 0.5 }), b64, baru: true };
+    $("#ceBox").classList.remove("hide");
+    sPdf = await SC.gambarHalaman(b64, $("#ceCv"));
+    if (sPdf.halaman > 1) toast("PDF punya " + sPdf.halaman + " halaman, hanya halaman 1 yang dipakai");
+    if (!$("#ceNama").value) $("#ceNama").value = f.name.replace(/\.pdf$/i, "");
+    sPaint();
+  } catch (er) { sc = null; sPaint(); alert("PDF tidak bisa dibaca: " + er.message); }
+};
+["ceFont", "ceUkuran", "ceWarna", "ceContoh"].forEach((id) => ($("#" + id).oninput = sPaint));
+$("#ceBox").onclick = (e) => {
+  if (!sc?.b64) return;
+  const r = $("#ceCv").getBoundingClientRect();
+  sc.x = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)); sc.y = Math.min(1, Math.max(0, (e.clientY - r.top) / r.height)); sPaint();
+};
+$("#ceBatal").onclick = sReset;
+$("#ceSimpan").onclick = async () => {
+  if (!sc?.b64) return alert("Unggah template PDF dulu.");
+  const nama = $("#ceNama").value.trim(); if (!nama) return alert("Isi nama template.");
+  const id = sc.id || "s" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+  const meta = { nama, x: sc.x, y: sc.y, ukuran: sc.ukuran, font: sc.font, warna: sc.warna, n: sc.n || 0, createdAt: sc.createdAt };
+  const btn = $("#ceSimpan"); btn.disabled = true; btn.textContent = "Menyimpan...";
+  try { await SC.simpanTemplate(id, meta, sc.baru ? sc.b64 : null, sc.n || 0); toast("Template tersimpan"); sReset(); await views.sertif(); }
+  catch (er) { alert("Gagal menyimpan: " + er.message); }
+  btn.disabled = false; btn.textContent = "Simpan template";
+};
+views.sertif = async () => {
+  await loadSert();
+  const [tg, ks] = await Promise.all([all("tugas"), all("kuis")]);
+  const pakai = (id) => [...tg, ...ks].filter((x) => x.sertif?.tid === id).length;
+  $("#ceDaftar").innerHTML = sertAll.length ? sertAll.map((s) => `<li><div class="row"><div class="fi">${icon("star")}</div><div><b>${esc(s.nama)}</b><div class="mute sm">Dipakai di ${pakai(s.id)} kuis/tugas</div></div></div><div style="display:flex;gap:6px"><button class="btn ghost sm" data-se="${s.id}">Atur</button><button class="btn ghost sm" data-sh="${s.id}" style="color:var(--bad)">Hapus</button></div></li>`).join("") : kosong("Belum ada template. Unggah PDF pertama Anda.");
+};
+$("#ceDaftar").onclick = async (e) => {
+  const b = e.target.closest("button"); if (!b) return;
+  try {
+    if (b.dataset.se) {
+      const t = await SC.ambilTemplate(b.dataset.se, true);
+      sc = { ...t, baru: false };
+      $("#ceNama").value = t.nama; $("#ceFont").value = t.font || "sans"; $("#ceUkuran").value = t.ukuran || 40; $("#ceWarna").value = t.warna || "#1f2937"; $("#ceFile").value = "";
+      $("#ceHead").textContent = "Ubah template"; $("#ceBatal").classList.remove("hide"); $("#ceBox").classList.remove("hide");
+      sPdf = await SC.gambarHalaman(t.b64, $("#ceCv")); sPaint(); $("#ceNama").scrollIntoView({ behavior: "smooth", block: "center" });
+    } else if (b.dataset.sh) {
+      const t = sertAll.find((x) => x.id === b.dataset.sh);
+      if (confirm(`Hapus template "${t?.nama}"? Kuis/tugas yang memakainya tidak akan bisa mengunduh sertifikat lagi.`)) { await SC.hapusTemplate(t.id, t.n || 0); if (sc?.id === t.id) sReset(); toast("Template dihapus"); views.sertif(); }
+    }
+  } catch (er) { alert("Gagal: " + er.message); }
+};
+sPaint();
+window.addEventListener("resize", () => sc?.b64 && sPdf && sPaint());
+loadMapel(); loadKelas(); loadSert();
 show("ringkasan");
 </script></body></html>
