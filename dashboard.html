@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"><style>:root{--bg:#F5F6FA;--card:#fff;--ink:#161A2E;--mute:#6B7186;--line:#E8EAF2;--brand:#4338CA;--b2:#6366F1;--soft:#EEF0FF;--ok:#12805C;--okbg:#E4F6EE;--warn:#B45309;--warnbg:#FEF3E2;--bad:#C62828}
+<!DOCTYPE html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#4338CA"><link rel="icon" href="icon-192.png"><link rel="apple-touch-icon" href="icon-192.png"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="DASPRO"><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"><style>:root{--bg:#F5F6FA;--card:#fff;--ink:#161A2E;--mute:#6B7186;--line:#E8EAF2;--brand:#4338CA;--b2:#6366F1;--soft:#EEF0FF;--ok:#12805C;--okbg:#E4F6EE;--warn:#B45309;--warnbg:#FEF3E2;--bad:#C62828}
 *{box-sizing:border-box}
 body{margin:0;font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased;font-size:15px;line-height:1.5}
 a{color:inherit;text-decoration:none}h1,h2,h3,p{margin:0}
@@ -260,9 +260,9 @@ async function gmPeringkat() {
   try {
     const g = await getDoc(doc(db, "peringkat", profile.kelasId));
     if (!g.exists()) return msg("Peringkat belum diterbitkan oleh guru.");
-    const dt = g.data(), rows = dt.rows || [], me = rows.findIndex((r) => r.id === user.uid), medal = ["🥇", "🥈", "🥉"];
+    const dt = g.data(), rows = dt.rows || [], top = Math.max(1, Number(gmCfg.papanTop) || 10), me = rows.findIndex((r) => r.id === user.uid), medal = ["🥇", "🥈", "🥉"];
     const baris = (r, i) => `<tr class="${r.id === user.uid ? "aku" : ""}"><td>${medal[i] || i + 1}</td><td>${esc(r.nama)}${r.id === user.uid ? " (kamu)" : ""}</td><td>${esc(r.level)}</td><td><b>${r.poin}</b></td></tr>`;
-    el.innerHTML = `<div class="card"><div style="overflow-x:auto"><table class="abt"><thead><tr><th>#</th><th>Nama</th><th>Level</th><th>Poin</th></tr></thead><tbody>${rows.slice(0, 10).map(baris).join("")}${me >= 10 ? `<tr><td colspan="4" class="mute" style="text-align:center">...</td></tr>${baris(rows[me], me)}` : ""}</tbody></table></div><p class="mute sm" style="margin-top:10px">Diperbarui ${dt.updatedAt?.seconds ? new Date(dt.updatedAt.seconds * 1000).toLocaleString("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "-"} oleh guru.</p></div>`;
+    el.innerHTML = `<div class="card"><div style="overflow-x:auto"><table class="abt"><thead><tr><th>#</th><th>Nama</th><th>Level</th><th>Poin</th></tr></thead><tbody>${rows.slice(0, top).map(baris).join("")}${me >= top && top >= 10 ? `<tr><td colspan="4" class="mute" style="text-align:center">...</td></tr>${baris(rows[me], me)}` : ""}</tbody></table></div>${me >= top && top < 10 ? `<div class="semangat">Terus semangat! Kamu sudah mengumpulkan <b>${rows[me].poin} poin</b>. Setiap tugas yang selesai membawamu naik level 💪</div>` : ""}<p class="mute sm" style="margin-top:10px">Diperbarui ${dt.updatedAt?.seconds ? new Date(dt.updatedAt.seconds * 1000).toLocaleString("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "-"} oleh guru.</p></div>`;
   } catch { msg("Peringkat belum bisa dimuat."); }
 }
 views.prestasi = () => {
@@ -434,7 +434,7 @@ async function mulaiKuis(k) {
       if (terkirim) return;
       const fd = new FormData($("#kf")), jawaban = {}; let belum = 0;
       r.soal.forEach((q, i) => { const v = String(fd.get("q" + i) ?? "").trim(); if (!v) belum++; else jawaban[q.id] = q.tipe === "pg" ? Number(v) : v; });
-      if (!otomatis && !confirm(belum ? `Masih ada ${belum} soal belum dijawab. Kirim sekarang?` : "Kirim jawaban? Jawaban tidak bisa diubah.")) return;
+      if (!otomatis && !await konfirmasi(belum ? `Masih ada ${belum} soal belum dijawab. Kirim sekarang?` : "Kirim jawaban? Jawaban tidak bisa diubah.")) return;
       terkirim = true; clearInterval(timerKuis); const tb = $("#kf button"); tb.disabled = true; tb.textContent = "Menghitung nilai...";
       try {
         const res = await kuisApi("kirim", { kuisId: k.id, jawaban });
@@ -455,7 +455,7 @@ async function mulaiKuis(k) {
 /* Profil */
 $("#pEmail").textContent = user.email || profile.email || "-"; pasangGantiSandi($("#gantiSandi"), user.email || profile.email, toast);
 let foto = profile.foto || "";
-const avatarHtml = (f, n) => (f && /^data:image\//.test(f) ? `<img src="${f}" alt="" style="width:100%;height:100%;object-fit:cover">` : esc((n || "?")[0].toUpperCase()));
+const avatarHtml = (f, n) => (f && /^(data:image\/|https:\/\/firebasestorage\.googleapis\.com\/)/.test(f) ? `<img src="${esc(f)}" alt="" style="width:100%;height:100%;object-fit:cover">` : esc((n || "?")[0].toUpperCase()));
 function paintProfil() {
   const nm = $("#pNama").value || profile.nama || "", kl = kelasNama($("#pKelas").value);
   $("#pAv").innerHTML = avatarHtml(foto, nm);
