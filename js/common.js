@@ -1,4 +1,4 @@
-import { DEMO, auth, db, onAuthStateChanged, signOut, doc, getDoc } from "./firebase.js";
+import { DEMO, auth, db, onAuthStateChanged, signOut, doc, getDoc, updateDoc, unggahFoto } from "./firebase.js";
 
 export const $ = (s) => document.querySelector(s);
 export const esc = (s = "") => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -104,16 +104,21 @@ export function guard(needAdmin, tabs, views = {}) {
       return;
     }
     if (needAdmin && profile.role !== "admin") return (location.href = "dashboard.html");
+    // Foto lama (tersimpan sebagai teks di database) dipindah diam-diam ke Storage bila sudah aktif
+    if (!DEMO && /^data:image\//.test(profile.foto || "") && !sessionStorage.getItem("fotoCoba")) {
+      sessionStorage.setItem("fotoCoba", "1");
+      unggahFoto(user.uid, profile.foto).then((u) => u && updateDoc(doc(db, "users", user.uid), { foto: u }).then(() => (profile.foto = u))).catch(() => {});
+    }
     const nama = profile.nama || user.email || "Pengguna";
-    const out = () => signOut(auth).then(() => (location.href = "login.html"));
+    const out = async () => { if (await konfirmasi("Keluar dari akun DASPRO?", { ok: "Keluar", ikon: "out" })) signOut(auth).then(() => (location.href = "login.html")); };
     // Menu utama di bilah bawah HP; sisanya masuk tombol "Menu"
     const utama = needAdmin ? ["ringkasan", "konten", "periksa", "absensi"] : ["beranda", "mapel", "pengumuman", "nilai"];
     const pendek = { mapel: "Mapel", konten: "Materi", pengumuman: "Info" };
     $(".app").insertAdjacentHTML("afterbegin", `<aside class="side"><div class="logo"><i>D</i>DASPRO</div>
       <nav>${tabs.map(([id, l, ic]) => `<button data-t="${id}"${utama.includes(id) ? " data-p" : ""}><span data-ic="${ic}"></span><em class="f">${l}</em><em class="s">${pendek[id] || l}</em></button>`).join("")}</nav>
-      <div class="me"><div class="av" style="overflow:hidden">${profile.foto && /^data:image\//.test(profile.foto) ? `<img src="${profile.foto}" alt="" style="width:100%;height:100%;object-fit:cover">` : esc(nama[0])}</div><div class="who"><b>${esc(nama)}</b><small>${needAdmin ? "Guru (admin)" : "Siswa"}</small></div><button id="keluar" title="Keluar" data-ic="out"></button></div></aside>`);
+      <div class="me"><div class="av" style="overflow:hidden">${profile.foto && /^(data:image\/|https:\/\/firebasestorage\.googleapis\.com\/)/.test(profile.foto) ? `<img src="${esc(profile.foto)}" alt="" style="width:100%;height:100%;object-fit:cover">` : esc(nama[0])}</div><div class="who"><b>${esc(nama)}</b><small>${needAdmin ? "Guru (admin)" : "Siswa"}</small></div><button id="keluar" title="Keluar" data-ic="out"></button></div></aside>`);
     $(".main").insertAdjacentHTML("afterbegin", `<div class="mtop"><div class="logo"><i>D</i>DASPRO</div><button id="keluar2" data-ic="out"></button></div>`);
-    $("#keluar").onclick = out; $("#keluar2").onclick = out;
+    $("#keluar").onclick = out; $("#keluar2").onclick = out; pwaBanner();
     // Tombol "Menu" (HP): buka/tutup daftar semua menu
     const side = $(".side"), IC_M = "M4 6h16M4 12h16M4 18h16", IC_X = "M6 6l12 12M18 6L6 18";
     side.insertAdjacentHTML("beforeend", `<button type="button" class="mmore" aria-label="Menu" aria-expanded="false"><svg class="i" viewBox="0 0 24 24"><path d="${IC_M}"/></svg><em>Menu</em></button>`);
@@ -135,4 +140,44 @@ export function guard(needAdmin, tabs, views = {}) {
     document.body.classList.remove("hide");
     resolve({ user, profile, show });
   }));
+}
+
+
+// ---- Dialog konfirmasi (pengganti confirm bawaan browser). Dipakai: if (await konfirmasi("Hapus ...?")) ...
+let kfDlg;
+export function konfirmasi(pesan, o = {}) {
+  const t = String(pesan), bahaya = o.bahaya ?? /^(hapus|tolak)/i.test(t);
+  const ok = o.ok || (/^hapus/i.test(t) ? "Hapus" : /^tolak/i.test(t) ? "Tolak" : /^kirim/i.test(t) ? "Kirim" : /^setujui/i.test(t) ? "Setujui" : "Lanjutkan");
+  return new Promise((res) => {
+    kfDlg?.remove();
+    const d = (kfDlg = document.createElement("dialog")); d.className = "kf"; let hasil = false;
+    d.innerHTML = `<div class="kfi ${bahaya ? "bad" : ""}">${icon(o.ikon || (bahaya ? "trash" : "check"))}</div><h3>${esc(o.judul || (bahaya ? "Yakin ingin melanjutkan?" : "Konfirmasi"))}</h3><p>${esc(t)}</p><div class="kfa"><button type="button" class="btn ghost" data-r="0" autofocus>Batal</button><button type="button" class="btn ${bahaya ? "bad" : ""}" data-r="1">${esc(ok)}</button></div>`;
+    d.onclick = (e) => { const b = e.target.closest("[data-r]"); if (b) { hasil = b.dataset.r === "1"; d.close(); } else if (e.target === d) d.close(); };
+    d.onclose = () => { d.remove(); res(hasil); };
+    document.body.append(d); d.showModal();
+  });
+}
+window.konfirmasi = konfirmasi;
+
+// ---- PWA: service worker, banner "Pasang di layar HP", info offline
+if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) {
+  const daftarSW = () => navigator.serviceWorker.register("sw.js").catch(() => {});
+  document.readyState === "complete" ? daftarSW() : addEventListener("load", daftarSW);
+}
+addEventListener("offline", () => toast("Anda sedang offline. Sebagian data tidak bisa dimuat."));
+addEventListener("online", () => toast("Kembali online"));
+let evPasang = null;
+addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); evPasang = e; pwaBanner(); });
+addEventListener("appinstalled", () => { evPasang = null; document.querySelector(".pwa")?.remove(); toast("DASPRO terpasang di layar HP"); });
+function pwaBanner() {
+  const main = document.querySelector(".main");
+  if (!main || main.querySelector(".pwa")) return;
+  let sudah = false, tunda = 0;
+  try { sudah = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true; tunda = Number(localStorage.getItem("pwaTunda")) || 0; } catch {}
+  const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) && !/crios|fxios/i.test(navigator.userAgent);
+  if (sudah || tunda > Date.now() || (!evPasang && !ios)) return;
+  const sembunyi = () => { try { localStorage.setItem("pwaTunda", String(Date.now() + 14 * 864e5)); } catch {} main.querySelector(".pwa")?.remove(); };
+  (main.querySelector(".mtop") || main).insertAdjacentHTML(main.querySelector(".mtop") ? "afterend" : "afterbegin", `<div class="pwa"><div class="pwai">${icon("download")}</div><div class="pwat"><b>Pasang DASPRO di HP</b><small>${evPasang ? "Buka lebih cepat dari layar utama, tanpa mengetik alamat." : "Ketuk Bagikan, lalu “Tambahkan ke Layar Utama”."}</small></div><button type="button" class="btn sm" id="pwaOk">${evPasang ? "Pasang" : "Mengerti"}</button><button type="button" class="pwax" id="pwaX" aria-label="Tutup">×</button></div>`);
+  main.querySelector("#pwaX").onclick = sembunyi;
+  main.querySelector("#pwaOk").onclick = async () => { if (evPasang) { evPasang.prompt(); await evPasang.userChoice.catch(() => {}); evPasang = null; main.querySelector(".pwa")?.remove(); } else sembunyi(); };
 }
