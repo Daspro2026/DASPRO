@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#4338CA"><link rel="icon" href="favicon.ico" sizes="any"><link rel="icon" type="image/png" sizes="48x48" href="favicon-48.png"><link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png"><link rel="icon" type="image/png" sizes="192x192" href="icon-192.png"><link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="DASPRO"><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"><style>:root{--bg:#F5F6FA;--card:#fff;--ink:#161A2E;--mute:#6B7186;--line:#E8EAF2;--brand:#4338CA;--b2:#6366F1;--soft:#EEF0FF;--ok:#12805C;--okbg:#E4F6EE;--warn:#B45309;--warnbg:#FEF3E2;--bad:#C62828}
+<!DOCTYPE html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#0B63CE"><link rel="icon" href="favicon.ico" sizes="any"><link rel="icon" type="image/png" sizes="48x48" href="favicon-48.png"><link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png"><link rel="icon" type="image/png" sizes="192x192" href="icon-192.png"><link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="DASPRO"><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"><style>:root{--bg:#F5F6FA;--card:#fff;--ink:#161A2E;--mute:#6B7186;--line:#E8EAF2;--brand:#0B63CE;--b2:#3B94F0;--soft:#EAF3FF;--ok:#12805C;--okbg:#E4F6EE;--warn:#B45309;--warnbg:#FEF3E2;--bad:#C62828}
 *{box-sizing:border-box}
 body{margin:0;font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased;font-size:15px;line-height:1.5}
 a{color:inherit;text-decoration:none}h1,h2,h3,p{margin:0}
@@ -167,7 +167,7 @@ dialog{border:0;border-radius:22px;max-width:580px;width:calc(100% - 32px);paddi
   <div class="grid g2">
     <form class="card" id="setForm">
       <label style="margin-top:0">Nama LMS / sekolah</label><input id="sNama" placeholder="DASPRO">
-      <label>Warna utama</label><div class="sw" id="sw"></div><input type="color" id="sWarna" value="#4338CA" style="height:44px;padding:4px;margin-top:12px">
+      <label>Warna utama</label><div class="sw" id="sw"></div><input type="color" id="sWarna" value="#0B63CE" style="height:44px;padding:4px;margin-top:12px">
       <label>Judul halaman depan</label><textarea id="sJudul" style="min-height:70px"></textarea>
       <label>Kalimat pengantar</label><textarea id="sDesk" style="min-height:90px"></textarea>
       <label>Logo (gambar persegi lebih bagus)</label>
@@ -193,7 +193,7 @@ dialog{border:0;border-radius:22px;max-width:580px;width:calc(100% - 32px);paddi
       <label>Nama lengkap</label><input id="gNama" required>
       <div class="grid g2" style="gap:14px"><div><label>Jabatan / bidang</label><input id="gJabatan" placeholder="Contoh: Guru Informatika"></div><div><label>NIP / ID guru</label><input id="gNip" placeholder="Opsional"></div></div>
       <div class="grid g2" style="gap:14px"><div><label>No. WhatsApp</label><input id="gHp" inputmode="tel" placeholder="08xxxxxxxxxx"></div><div><label>Email akun</label><input id="gEmail" disabled></div></div>
-      <label>Tentang saya</label><textarea id="gDesk" style="min-height:100px" placeholder="Pengalaman mengajar, motto, atau pesan untuk siswa"></textarea>
+      <label>Tentang saya (kalimat pertama tampil di halaman depan)</label><textarea id="gDesk" style="min-height:100px" placeholder="Pengalaman mengajar, motto, atau pesan untuk siswa"></textarea>
       <button class="btn full">Simpan profil</button></form>
   </div></section>
 
@@ -356,6 +356,8 @@ $("#gForm").onsubmit = async (e) => {
   const lama = akunProfil?.nama;
   try {
     await updateDoc(doc(db, "users", akun.uid), d);
+    // Salinan publik untuk bagian "Dikelola oleh" di halaman depan (hanya nama, jabatan, kalimat singkat, foto)
+    try { await setDoc(doc(db, "settings", "site"), { pengelola: { nama: d.nama, jabatan: d.jabatan, deskripsi: d.deskripsi.split("\n")[0].slice(0, 180), foto: d.foto } }, { merge: true }); } catch {}
     Object.assign(akunProfil, d);
     const me = document.querySelector(".me");
     if (me) { me.querySelector(".av").innerHTML = avHtml(gFoto, d.nama); me.querySelector("b").textContent = d.nama; }
@@ -893,8 +895,8 @@ badgeTunggu();
 
 /* Pengaturan */
 $("#aEmail").textContent = akun?.email || akunProfil?.email || "-"; pasangGantiSandi($("#gantiSandi"), akun?.email || akunProfil?.email, toast);
-const DEF = { nama: "DASPRO", warna: "#4338CA", judul: "Belajar tertata,\nnilai terpantau.", deskripsi: "Daus Academic & Skills Platform: tempat modul, materi, tugas, dan umpan balik guru berkumpul dalam satu halaman yang rapi.", logo: "" };
-const WARNA = [["Indigo", "#4338CA"], ["Biru", "#1D4ED8"], ["Teal", "#0F766E"], ["Hijau", "#047857"], ["Ungu", "#7E22CE"], ["Merah", "#BE123C"], ["Oranye", "#C2410C"], ["Abu", "#334155"]];
+const DEF = { nama: "DASPRO", warna: "#0B63CE", judul: "Belajar tertata,\nnilai terpantau.", deskripsi: "Daus Academic & Skills Platform: tempat modul, materi, tugas, dan umpan balik guru berkumpul dalam satu halaman yang rapi.", logo: "" };
+const WARNA = [["Biru logo", "#0B63CE"], ["Indigo", "#4338CA"], ["Biru", "#1D4ED8"], ["Teal", "#0F766E"], ["Hijau", "#047857"], ["Ungu", "#7E22CE"], ["Merah", "#BE123C"], ["Oranye", "#C2410C"], ["Abu", "#334155"]];
 let cur = { ...DEF };
 $("#sw").innerHTML = WARNA.map(([n, c]) => `<button type="button" title="${n}" data-c="${c}" style="background:${c}"></button>`).join("");
 const readForm = () => ({ ...cur, nama: $("#sNama").value.trim() || DEF.nama, warna: $("#sWarna").value, judul: $("#sJudul").value, deskripsi: $("#sDesk").value });
