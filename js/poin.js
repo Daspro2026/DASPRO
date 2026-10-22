@@ -1,7 +1,7 @@
 // Gamifikasi: aturan poin, level, dan lencana. Dipakai bersama oleh dashboard guru (menerbitkan peringkat) dan siswa (poin pribadi).
 // Poin dihitung hanya dari data yang tidak bisa dipalsukan siswa: nilai yang diberikan guru/server dan kehadiran yang dicatat guru.
 
-export const CFG_DEFAULT = { tugas: 10, bonus90: 10, bonus75: 5, hadir: 5, papan: true };
+export const CFG_DEFAULT = { tugas: 10, bonus90: 10, bonus75: 5, hadir: 5, papan: true, papanTop: 10 };
 
 export function cfgDari(d = {}) {
   const c = { ...CFG_DEFAULT };
