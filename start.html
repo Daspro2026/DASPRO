@@ -1,0 +1,13 @@
+<!DOCTYPE html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>DASPRO</title>
+<link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#4338CA"><link rel="icon" href="icon-192.png"><link rel="apple-touch-icon" href="icon-192.png">
+<style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:linear-gradient(160deg,#2B2599,#4338CA 55%,#6366F1)}.l{width:44px;height:44px;border:4px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:s 1s linear infinite}@keyframes s{to{transform:rotate(1turn)}}</style></head>
+<body><div class="l"></div>
+<script type="module">
+// Halaman peluncur (dibuka dari ikon di layar HP): arahkan ke login, dashboard siswa, atau admin.
+import { auth, db, onAuthStateChanged, doc, getDoc } from "./js/firebase.js";
+onAuthStateChanged(auth, async (u) => {
+  if (!u) return location.replace("login.html");
+  try { const p = (await getDoc(doc(db, "users", u.uid))).data(); location.replace(p?.role === "admin" ? "admin.html" : "dashboard.html"); }
+  catch { location.replace("dashboard.html"); }
+});
+</script></body></html>
