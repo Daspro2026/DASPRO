@@ -45,6 +45,7 @@ module.exports = async (req, res) => {
     // Urutan: data dulu, akun login, profil terakhir. Kalau ada langkah yang gagal, aman diulang (tidak ada yang rusak).
     const nilai = await hapusQuery(db.collection("submissions").where("siswaId", "==", uid));
     const berkas = await hapusQuery(db.collection("berkas").where("siswaId", "==", uid));
+    await hapusQuery(db.collection("kehadiran").where("siswaId", "==", uid));
     const kuis = await db.collection("kuis").select().get();
     for (let i = 0; i < kuis.docs.length; i += 400) {
       const b = db.batch(); kuis.docs.slice(i, i + 400).forEach((k) => b.delete(db.doc(`percobaan/${k.id}_${uid}`))); await b.commit();
@@ -57,4 +58,3 @@ module.exports = async (req, res) => {
     const auth = !e.http && /id-token|auth\/|token/i.test(e.code || e.message || "");
     return res.status(e.http || (auth ? 401 : 500)).json({ error: e.http ? e.message : auth ? "Sesi login tidak valid. Silakan masuk ulang." : "Terjadi kesalahan di server." });
   }
-};
