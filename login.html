@@ -81,7 +81,8 @@ input:focus{border-color:var(--b2);box-shadow:0 0 0 4px color-mix(in srgb,var(--
     <form id="form">
       <div id="namaWrap" class="hide"><label>Nama lengkap</label><input id="nama" placeholder="Nama Anda" autocomplete="name"></div>
       <label>Email</label><input id="email" type="email" placeholder="nama@email.com" autocomplete="email" required>
-      <label>Kata sandi</label><input id="pass" type="password" minlength="6" placeholder="Minimal 6 karakter" autocomplete="current-password" required>
+      <label>Kata sandi</label><div class="pw"><input id="pass" type="password" minlength="6" placeholder="Minimal 6 karakter" autocomplete="current-password" autocapitalize="none" autocorrect="off" spellcheck="false" required><button type="button" id="lihatPass" class="pwb" aria-label="Tampilkan kata sandi" aria-pressed="false"><svg class="pe" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg><svg class="px" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.9 10.9 0 0 1 12 19c-6.4 0-10-7-10-7a18.4 18.4 0 0 1 5.06-5.94M9.9 4.24A9.8 9.8 0 0 1 12 4c6.4 0 10 7 10 7a18.5 18.5 0 0 1-2.16 3.19M14.12 14.12a3 3 0 1 1-4.24-4.24"/><path d="M1 1l22 22"/></svg></button></div>
+      <style>.pw{position:relative}.pw input{padding-right:48px}.pwb{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:38px;height:38px;display:grid;place-items:center;border:0;background:none;color:var(--mute);border-radius:10px;cursor:pointer;padding:0}.pwb:hover{color:var(--brand);background:var(--soft)}.pwb:focus-visible{outline:2px solid var(--b2)}.pwb .px{display:none}.pwb.on .px{display:block}.pwb.on .pe{display:none}.pwb.on{color:var(--brand)}</style>
       <div id="kodeWrap" class="hide"><label id="kodeLbl">Kode kelas</label><input id="kode" placeholder="Contoh: K7M3QX9P" autocomplete="off" autocapitalize="characters" maxlength="24" style="text-transform:uppercase"><p class="mute" id="kodeNote" style="font-size:.82rem;margin-top:6px"></p></div>
       <a href="#" id="lupa" class="lupa">Lupa kata sandi?</a>
       <p class="err" id="err"></p>
@@ -192,5 +193,21 @@ $("#form").onsubmit = async (e) => {
     $("#kirim").disabled = false;
   }
 };
+
+</script>
+<script>
+// Tombol lihat/sembunyikan kata sandi
+(() => {
+  const i = document.getElementById("pass"), b = document.getElementById("lihatPass");
+  if (!i || !b) return;
+  b.addEventListener("click", () => {
+    const tampil = i.type === "password";
+    i.type = tampil ? "text" : "password";
+    b.classList.toggle("on", tampil);
+    b.setAttribute("aria-pressed", String(tampil));
+    b.setAttribute("aria-label", tampil ? "Sembunyikan kata sandi" : "Tampilkan kata sandi");
+    i.focus();
+  });
+})();
 </script>
 </body></html>
