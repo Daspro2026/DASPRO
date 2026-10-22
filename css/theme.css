@@ -3,7 +3,7 @@
    Warna utama tetap mengikuti Pengaturan guru (--brand / --b2). */
 
 /* ---------- GLOBAL (semua halaman) ---------- */
-:root{--bg:#F3F5FB;--ink:#0F172A;--mute:#64748B;--line:#E4E8F2;--brand:#4F46E5;--b2:#7C7FF7;--soft:#EEF0FF;
+:root{--bg:#F3F5FB;--ink:#0F172A;--mute:#64748B;--line:#E4E8F2;--brand:#0B63CE;--b2:#3B94F0;--soft:#EAF3FF;
   --nav1:#0B1226;--nav2:#131C3B;--ease:cubic-bezier(.22,1,.36,1);
   --sh1:0 1px 2px rgba(15,23,42,.05),0 10px 28px -14px rgba(15,23,42,.14);--sh2:0 2px 4px rgba(15,23,42,.06),0 18px 40px -16px rgba(15,23,42,.22)}
 html{scroll-behavior:smooth}
@@ -169,14 +169,14 @@ a.fchip:hover{border-color:var(--b2);background:var(--soft);transform:translateY
 .rt{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
 .spv{position:relative;margin-top:14px;border:1px solid var(--line);border-radius:12px;overflow:hidden;cursor:crosshair;line-height:0;background:#fff}
 .spv canvas{width:100%;height:auto;display:block}
-#ceNm{position:absolute;transform:translate(-50%,-50%);white-space:nowrap;pointer-events:none;line-height:1.1;outline:1.5px dashed rgba(79,70,229,.7);outline-offset:5px}
+#ceNm{position:absolute;transform:translate(-50%,-50%);white-space:nowrap;pointer-events:none;line-height:1.1;outline:1.5px dashed rgba(11,99,206,.7);outline-offset:5px}
 
 #ceNo{position:absolute;transform:translate(-50%,-50%);white-space:nowrap;pointer-events:none;line-height:1.1;font-family:Arial,Helvetica,sans-serif;outline:1.5px dashed rgba(234,138,12,.85);outline-offset:4px}
 .seg{display:flex;gap:6px;margin-top:12px}
 .seg button{flex:1;padding:9px 10px;border-radius:10px;border:1.5px solid var(--line);background:#fff;font-weight:700;font-size:.82rem;cursor:pointer;color:var(--mute);transition:.2s}
 .seg button.on{background:var(--soft);border-color:var(--b2);color:var(--brand)}
 
-.spv{touch-action:none;user-select:none;-webkit-user-select:none}.spv:focus{outline:none}.spv:focus-visible{box-shadow:0 0 0 3px rgba(79,70,229,.35)}
+.spv{touch-action:none;user-select:none;-webkit-user-select:none}.spv:focus{outline:none}.spv:focus-visible{box-shadow:0 0 0 3px rgba(11,99,206,.35)}
 .spv #ceNm,.spv #ceNo{cursor:move}
 .gl{position:absolute;pointer-events:none;z-index:1}
 .gl.gv{left:50%;top:0;bottom:0;border-left:1px dashed rgba(220,38,38,.55)}
