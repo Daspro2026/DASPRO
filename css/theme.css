@@ -422,3 +422,30 @@ a.fchip:hover{border-color:var(--b2);background:var(--soft);transform:translateY
   #nilaiTbl td:nth-child(5){grid-column:1/-1;margin-top:8px}
   #nilaiTbl td:nth-child(5):empty{display:none}
 }
+
+
+/* ===== Dialog konfirmasi ===== */
+.btn.bad{background:linear-gradient(135deg,#DC2626,#B91C1C);box-shadow:0 8px 18px -8px #DC2626}
+.kf{max-width:420px;text-align:center}
+.kfi{width:56px;height:56px;border-radius:18px;background:var(--soft);color:var(--brand);display:grid;place-items:center;margin:0 auto 14px}
+.kfi.bad{background:#FDE8E8;color:var(--bad)}
+.kfi svg{width:26px;height:26px}
+.kf h3{margin:0 0 6px;font-size:1.1rem}
+.kf p{color:var(--mute);line-height:1.55;margin:0}
+.kfa{display:flex;gap:10px;margin-top:22px}
+.kfa .btn{flex:1;margin:0;min-height:46px}
+
+/* ===== Banner "Pasang di layar HP" (hanya di HP) ===== */
+.pwa{display:none}
+@media(max-width:860px){
+  .pwa{display:flex;align-items:center;gap:12px;margin:0 0 14px;padding:12px;border:1px solid var(--line);border-radius:16px;background:#fff;box-shadow:var(--sh1)}
+  .pwai{width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,var(--brand),var(--b2));color:#fff;display:grid;place-items:center;flex:none}
+  .pwat{flex:1;min-width:0;line-height:1.3}
+  .pwat b{display:block;font-size:.9rem}
+  .pwat small{display:block;color:var(--mute);font-size:.75rem;margin-top:2px}
+  .pwa .btn{flex:none}
+  .pwax{flex:none;border:0;background:none;color:var(--mute);font-size:1.5rem;line-height:1;width:32px;height:44px;cursor:pointer}
+}
+
+/* ===== Papan peringkat: pesan semangat ===== */
+.semangat{margin-top:12px;padding:12px 14px;border-radius:14px;background:var(--soft);color:var(--ink);font-size:.9rem;line-height:1.5}
