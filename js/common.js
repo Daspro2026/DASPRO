@@ -106,15 +106,30 @@ export function guard(needAdmin, tabs, views = {}) {
     if (needAdmin && profile.role !== "admin") return (location.href = "dashboard.html");
     const nama = profile.nama || user.email || "Pengguna";
     const out = () => signOut(auth).then(() => (location.href = "login.html"));
+    // Menu utama di bilah bawah HP; sisanya masuk tombol "Menu"
+    const utama = needAdmin ? ["ringkasan", "konten", "periksa", "absensi"] : ["beranda", "mapel", "pengumuman", "nilai"];
+    const pendek = { mapel: "Mapel", konten: "Materi" };
     $(".app").insertAdjacentHTML("afterbegin", `<aside class="side"><div class="logo"><i>D</i>DASPRO</div>
-      <nav>${tabs.map(([id, l, ic]) => `<button data-t="${id}"><span data-ic="${ic}"></span>${l}</button>`).join("")}</nav>
+      <nav>${tabs.map(([id, l, ic]) => `<button data-t="${id}"${utama.includes(id) ? " data-p" : ""}><span data-ic="${ic}"></span><em class="f">${l}</em><em class="s">${pendek[id] || l}</em></button>`).join("")}</nav>
       <div class="me"><div class="av" style="overflow:hidden">${profile.foto && /^data:image\//.test(profile.foto) ? `<img src="${profile.foto}" alt="" style="width:100%;height:100%;object-fit:cover">` : esc(nama[0])}</div><div class="who"><b>${esc(nama)}</b><small>${needAdmin ? "Guru (admin)" : "Siswa"}</small></div><button id="keluar" title="Keluar" data-ic="out"></button></div></aside>`);
     $(".main").insertAdjacentHTML("afterbegin", `<div class="mtop"><div class="logo"><i>D</i>DASPRO</div><button id="keluar2" data-ic="out"></button></div>`);
     $("#keluar").onclick = out; $("#keluar2").onclick = out;
+    // Tombol "Menu" (HP): buka/tutup daftar semua menu
+    const side = $(".side"), IC_M = "M4 6h16M4 12h16M4 18h16", IC_X = "M6 6l12 12M18 6L6 18";
+    side.insertAdjacentHTML("beforeend", `<button type="button" class="mmore" aria-label="Menu" aria-expanded="false"><svg class="i" viewBox="0 0 24 24"><path d="${IC_M}"/></svg><em>Menu</em></button>`);
+    const mm = side.querySelector(".mmore");
+    const menu = (buka) => {
+      side.classList.toggle("open", buka); document.body.classList.toggle("menu-open", buka);
+      mm.setAttribute("aria-expanded", buka); mm.querySelector("path").setAttribute("d", buka ? IC_X : IC_M); mm.querySelector("em").textContent = buka ? "Tutup" : "Menu";
+      if (buka) side.scrollTop = 0;
+    };
+    mm.onclick = () => menu(!side.classList.contains("open"));
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape") menu(false); });
+    matchMedia("(min-width:861px)").addEventListener("change", (e) => { if (e.matches) menu(false); });
     const show = (id) => {
       document.querySelectorAll(".main > section").forEach((s) => s.classList.toggle("hide", s.id !== id));
       document.querySelectorAll(".side nav button").forEach((b) => b.classList.toggle("on", b.dataset.t === id));
-      window.scrollTo(0, 0); document.querySelector(".main")?.scrollTo(0, 0); views[id]?.();
+      menu(false); window.scrollTo(0, 0); document.querySelector(".main")?.scrollTo(0, 0); views[id]?.();
     };
     document.querySelectorAll(".side nav button").forEach((b) => (b.onclick = () => show(b.dataset.t)));
     document.body.classList.remove("hide");
