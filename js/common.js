@@ -108,7 +108,7 @@ export function guard(needAdmin, tabs, views = {}) {
     const out = () => signOut(auth).then(() => (location.href = "login.html"));
     // Menu utama di bilah bawah HP; sisanya masuk tombol "Menu"
     const utama = needAdmin ? ["ringkasan", "konten", "periksa", "absensi"] : ["beranda", "mapel", "pengumuman", "nilai"];
-    const pendek = { mapel: "Mapel", konten: "Materi" };
+    const pendek = { mapel: "Mapel", konten: "Materi", pengumuman: "Info" };
     $(".app").insertAdjacentHTML("afterbegin", `<aside class="side"><div class="logo"><i>D</i>DASPRO</div>
       <nav>${tabs.map(([id, l, ic]) => `<button data-t="${id}"${utama.includes(id) ? " data-p" : ""}><span data-ic="${ic}"></span><em class="f">${l}</em><em class="s">${pendek[id] || l}</em></button>`).join("")}</nav>
       <div class="me"><div class="av" style="overflow:hidden">${profile.foto && /^data:image\//.test(profile.foto) ? `<img src="${profile.foto}" alt="" style="width:100%;height:100%;object-fit:cover">` : esc(nama[0])}</div><div class="who"><b>${esc(nama)}</b><small>${needAdmin ? "Guru (admin)" : "Siswa"}</small></div><button id="keluar" title="Keluar" data-ic="out"></button></div></aside>`);
