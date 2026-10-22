@@ -1,6 +1,6 @@
 // ============================================================
 // ISI konfigurasi Firebase Anda di bawah ini.
-// Selama masih berisi "ISI_...", website berjalan di MODE DEMO
+// Selama masih berisi "ISI_...", website berjalan di MODE DEMO (sekarang sudah terisi, jadi memakai Firebase asli)
 // (data contoh, tanpa Firebase) agar Anda bisa melihat tampilannya.
 // ============================================================
 const firebaseConfig = {
@@ -9,7 +9,7 @@ const firebaseConfig = {
   projectId: "daspro-8f6ca",
   storageBucket: "daspro-8f6ca.firebasestorage.app",
   messagingSenderId: "971620742175",
-  appId: "1:971620742175:web:199ef8e1740b0f8efa512a",
+  appId: "1:971620742175:web:199ef8e1740b0f8efa512a"
 };
 
 export const DEMO = firebaseConfig.apiKey.startsWith("ISI");
