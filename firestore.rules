@@ -44,6 +44,11 @@ service cloud.firestore {
     match /kuis/{id}   { allow read: if aktif(); allow write: if isAdmin(); }
     // Kunci jawaban: HANYA admin. Siswa tidak bisa membaca sama sekali.
     match /kunci/{id}  { allow read, write: if isAdmin(); }
+    // Absensi: hanya guru yang menulis. Siswa hanya boleh membaca kehadirannya sendiri.
+    match /pertemuan/{id} { allow read, write: if isAdmin(); }
+    match /kehadiran/{id} { allow read: if isAdmin() || (aktif() && resource.data.siswaId == request.auth.uid); allow write: if isAdmin(); }
+    // Papan peringkat per kelas: ditulis guru, hanya dibaca siswa dari kelas yang sama.
+    match /peringkat/{id} { allow read: if isAdmin() || (aktif() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('kelasId', '') == id); allow write: if isAdmin(); }
     // Pengumuman guru: siswa aktif boleh membaca, hanya admin yang boleh menulis.
     match /pengumuman/{id} { allow read: if aktif(); allow write: if isAdmin(); }
     match /sertifikat/{id}     { allow read: if aktif(); allow write: if isAdmin(); }
