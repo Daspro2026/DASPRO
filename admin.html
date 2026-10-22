@@ -197,6 +197,38 @@ dialog{border:0;border-radius:22px;max-width:580px;width:calc(100% - 32px);paddi
       <button class="btn full">Simpan profil</button></form>
   </div></section>
 
+<section id="absensi" class="hide"><div class="ph"><div><h1>Absensi</h1><p>Catat kehadiran siswa per pertemuan, lalu lihat rekapnya per kelas.</p></div></div>
+  <div class="sisbar"><select id="abKelas" style="width:auto;min-width:200px"></select>
+    <div class="seg" id="abTab" style="margin-top:0"><button type="button" data-t="pertemuan" class="on">Pertemuan</button><button type="button" data-t="rekap">Rekap kelas</button></div></div>
+  <div id="abPertemuan">
+    <div class="grid gk" style="align-items:start">
+      <form class="card" id="abForm"><h2>Pertemuan baru</h2>
+        <label>Tanggal</label><input type="date" id="abTgl" required>
+        <label>Mata pelajaran</label><select id="abMapel"></select>
+        <label>Topik (opsional)</label><input id="abTopik" maxlength="120" placeholder="Contoh: Variabel dan tipe data">
+        <button class="btn full">Buka lembar absensi</button></form>
+      <div class="card"><h2>Riwayat pertemuan</h2><ul class="list" id="abDaftar" style="margin-top:8px"></ul></div>
+    </div>
+    <div class="card hide" id="abSheet" style="margin-top:18px"></div>
+  </div>
+  <div id="abRekap" class="hide"><div class="card"><div class="gh2"><h2>Rekap kehadiran kelas</h2><button class="btn ghost sm" id="abXls">Unduh Excel</button></div><div id="abRekapTbl" style="overflow-x:auto;margin-top:10px"></div></div></div>
+</section>
+
+<section id="gamifikasi" class="hide"><div class="ph"><div><h1>Gamifikasi</h1><p>Atur aturan poin, lalu terbitkan papan peringkat kelas agar siswa lebih bersemangat.</p></div></div>
+  <div class="grid gk" style="align-items:start">
+    <form class="card" id="gmForm"><h2>Aturan poin</h2>
+      <label>Poin tiap tugas atau kuis yang selesai dinilai</label><input id="gmTugas" type="number" min="0" max="100">
+      <div class="grid g2" style="gap:12px"><div><label>Bonus nilai 90 ke atas</label><input id="gmB90" type="number" min="0" max="100"></div><div><label>Bonus nilai 75 ke atas</label><input id="gmB75" type="number" min="0" max="100"></div></div>
+      <label>Poin tiap kehadiran (Hadir)</label><input id="gmHadir" type="number" min="0" max="100">
+      <label style="display:flex;gap:8px;align-items:center;color:var(--ink);margin-top:14px"><input type="checkbox" id="gmPapan" style="width:auto"> Tampilkan papan peringkat ke siswa</label>
+      <button class="btn full">Simpan aturan</button>
+      <p class="mute sm" style="margin-top:10px">Level: Pemula (0), Rajin (100), Mahir (250), Ahli (500), Master (1000 poin). Lencana didapat otomatis dari jumlah tugas, nilai, dan kehadiran.</p></form>
+    <div class="card"><h2>Papan peringkat</h2>
+      <p class="mute sm" id="gmInfo" style="margin-top:4px"></p>
+      <div class="sisbar" style="margin:12px 0 0"><select id="gmKelas" style="width:auto;min-width:180px"></select><button type="button" class="btn" id="gmTerbit">Hitung dan terbitkan</button></div>
+      <div id="gmTabel" style="margin-top:14px;overflow-x:auto"></div></div>
+  </div></section>
+
 <section id="pengumuman" class="hide"><div class="ph"><div><h1>Pengumuman</h1><p>Kirim informasi ke siswa. Siswa melihatnya di Beranda, dan menu Pengumuman mereka diberi tanda angka untuk yang belum dibaca.</p></div></div>
   <div class="grid gk" style="align-items:start">
     <form class="card" id="pgForm"><h2 id="pgHead">Pengumuman baru</h2>
@@ -254,10 +286,11 @@ import { DEMO, auth, db, storage, collection, getDocs, addDoc, deleteDoc, update
 import { pasangGantiSandi } from "./js/reset.js";
 import * as SC from "./js/sertifikat.js";
 import * as EX from "./js/ekspor.js";
-import { guard, esc, $, ago, icon, toast, applySettings, safeUrl, fileChips } from "./js/common.js";
+import * as GM from "./js/poin.js";
+import { guard, esc, $, ago, icon, toast, applySettings, safeUrl, fileChips, fdate } from "./js/common.js";
 
 const views = {};
-const { show, user: akun, profile: akunProfil } = await guard(true, [["ringkasan", "Ringkasan", "grid"], ["pengumuman", "Pengumuman", "clock"], ["mapel", "Mata pelajaran", "book"], ["kelas", "Kelas", "users"], ["siswa", "Siswa", "users"], ["daftar", "Pendaftaran", "key"], ["konten", "Materi & Tugas", "upload"], ["kuis", "Kuis", "edit"], ["sertif", "Sertifikat", "star"], ["periksa", "Periksa", "check"], ["nilaiS", "Rekap nilai", "star"], ["analitik", "Analitik", "chart"], ["profilG", "Profil", "users"], ["setelan", "Pengaturan", "sliders"]], views);
+const { show, user: akun, profile: akunProfil } = await guard(true, [["ringkasan", "Ringkasan", "grid"], ["pengumuman", "Pengumuman", "clock"], ["mapel", "Mata pelajaran", "book"], ["kelas", "Kelas", "users"], ["siswa", "Siswa", "users"], ["daftar", "Pendaftaran", "key"], ["konten", "Materi & Tugas", "upload"], ["kuis", "Kuis", "edit"], ["sertif", "Sertifikat", "star"], ["periksa", "Periksa", "check"], ["nilaiS", "Rekap nilai", "star"], ["analitik", "Analitik", "chart"], ["absensi", "Absensi", "check"], ["gamifikasi", "Gamifikasi", "star"], ["profilG", "Profil", "users"], ["setelan", "Pengaturan", "sliders"]], views);
 const all = async (c) => (await getDocs(collection(db, c))).docs.map((d) => ({ id: d.id, ...d.data() }));
 const kosong = (t) => `<div class="empty">${t}</div>`;
 $("#keP").onclick = () => show("periksa");
@@ -267,6 +300,10 @@ $("#keP").onclick = () => show("periksa");
   Object.entries(G).forEach(([t, l]) => document.querySelector(`.side nav [data-t="${t}"]`)?.insertAdjacentHTML("beforebegin", `<div class="nl">${l}</div>`));
   const ic = document.querySelector('.side nav [data-t="profilG"] span');
   if (ic) { ic.removeAttribute("data-ic"); ic.innerHTML = '<svg class="i" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 11a4 4 0 100-8 4 4 0 000 8z"/></svg>'; }
+  const ic5 = document.querySelector('.side nav [data-t="absensi"] span');
+  if (ic5) { ic5.removeAttribute("data-ic"); ic5.innerHTML = '<svg class="i" viewBox="0 0 24 24"><path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z"/></svg>'; }
+  const ic6 = document.querySelector('.side nav [data-t="gamifikasi"] span');
+  if (ic6) { ic6.removeAttribute("data-ic"); ic6.innerHTML = '<svg class="i" viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0V4zM17 5h3v2a3 3 0 01-3 3M7 5H4v2a3 3 0 003 3"/></svg>'; }
   const ic4 = document.querySelector('.side nav [data-t="pengumuman"] span');
   if (ic4) { ic4.removeAttribute("data-ic"); ic4.innerHTML = '<svg class="i" viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>'; }
   const ic3 = document.querySelector('.side nav [data-t="siswa"] span');
@@ -886,6 +923,150 @@ $("#setForm").onsubmit = async (e) => {
     localStorage.setItem("daspro_set", JSON.stringify(cur)); toast("Pengaturan tersimpan");
   } catch (er) { alert("Gagal menyimpan. Pastikan firestore.rules terbaru sudah di-Publish di Firebase.\n" + er.message); }
 };
+/* ===== Absensi ===== */
+const AB = { H: "Hadir", I: "Izin", S: "Sakit", A: "Alpa" };
+let abSis = [], abPert = [], abKini = null, abNilai = {}, abTab = "pertemuan", abData = null;
+const abKid = () => $("#abKelas").value;
+const abPersen = (h, t) => (t ? Math.round((h / t) * 100) : 0);
+const abPendek = (s) => String(s || "").slice(5).split("-").reverse().join("/");
+async function abMuat() {
+  const k = abKid();
+  abKini = null; $("#abSheet").classList.add("hide");
+  if (!k) { $("#abDaftar").innerHTML = kosong("Buat kelas dulu di menu Kelas, lalu daftarkan siswa ke kelas itu."); return; }
+  abSis = (await getDocs(query(collection(db, "users"), where("role", "==", "siswa")))).docs.map((d) => ({ id: d.id, ...d.data() }))
+    .filter((u) => (u.status || "aktif") === "aktif" && u.kelasId === k).sort((x, y) => String(x.nama || "").localeCompare(String(y.nama || ""), "id"));
+  abPert = (await getDocs(query(collection(db, "pertemuan"), where("kelasId", "==", k)))).docs.map((d) => ({ id: d.id, ...d.data() }))
+    .sort((x, y) => String(y.tanggal).localeCompare(String(x.tanggal)) || (y.createdAt?.seconds || 0) - (x.createdAt?.seconds || 0));
+  $("#abDaftar").innerHTML = abPert.map((p) => { const h = p.hitung; return `<li style="flex-wrap:wrap"><div class="row" style="min-width:0"><div class="fi">${icon("clock")}</div><div style="min-width:0"><b>${esc(fdate(p.tanggal))}</b>${h ? "" : ' <span class="tag warn">Belum diisi</span>'}<div class="mute sm">${esc(p.mapelNama || "Umum")}${p.topik ? " · " + esc(p.topik) : ""}</div>${h ? `<div class="mute sm">Hadir ${h.H} · Izin ${h.I} · Sakit ${h.S} · Alpa ${h.A} (${abPersen(h.H, p.total)}%)</div>` : ""}</div></div><div style="display:flex;gap:6px"><button class="btn ghost sm" data-ab="${p.id}">${h ? "Ubah" : "Isi absensi"}</button><button class="btn ghost sm" data-abd="${p.id}" title="Hapus" style="color:var(--bad)">${icon("trash")}</button></div></li>`; }).join("") || kosong("Belum ada pertemuan. Buat pertemuan baru di formulir.");
+  if (abTab === "rekap") await abRekap();
+}
+views.absensi = async () => {
+  await Promise.all([loadKelas(), loadMapel()]);
+  const v = $("#abKelas").value;
+  $("#abKelas").innerHTML = kelasAll.length ? kelasAll.map((k) => opt(k.id, "Kelas " + k.nama)).join("") : opt("", "Belum ada kelas");
+  if ([...$("#abKelas").options].some((o) => o.value === v)) $("#abKelas").value = v;
+  $("#abMapel").innerHTML = opt("", "Umum") + mapelAll.map((m) => opt(m.id, m.nama)).join("");
+  if (!$("#abTgl").value) $("#abTgl").value = new Date().toLocaleDateString("sv-SE");
+  try { await abMuat(); } catch (er) { $("#abDaftar").innerHTML = kosong("Gagal memuat: " + esc(er.message)); }
+};
+function abHitungTampil() {
+  const h = { H: 0, I: 0, S: 0, A: 0 }; abSis.forEach((s) => h[abNilai[s.id]]++);
+  const el = $("#abHitung"); if (el) el.textContent = `Hadir ${h.H} · Izin ${h.I} · Sakit ${h.S} · Alpa ${h.A}`;
+  return h;
+}
+async function abBuka(p) {
+  abKini = p;
+  const ada = {}; (await getDocs(query(collection(db, "kehadiran"), where("pertemuanId", "==", p.id)))).docs.forEach((d) => (ada[d.data().siswaId] = d.data().status));
+  abNilai = {}; abSis.forEach((s) => (abNilai[s.id] = ada[s.id] || "H"));
+  $("#abSheet").innerHTML = `<div class="gh2"><h2>Absensi · Kelas ${esc(kelasNama(p.kelasId))} · ${esc(fdate(p.tanggal))}</h2><button type="button" class="btn ghost sm" id="abTutup">Tutup</button></div>
+    <p class="mute sm">${esc(p.mapelNama || "Umum")}${p.topik ? " · " + esc(p.topik) : ""}. Semua siswa diawali Hadir, ubah yang tidak hadir.</p>
+    ${abSis.length ? `<div class="tb"><button type="button" class="btn ghost sm" id="abSemua">Semua hadir</button><span class="mute sm" id="abHitung"></span></div>
+    <div style="overflow-x:auto"><table class="abt"><thead><tr><th>No</th><th>Nama siswa</th><th>Kehadiran</th></tr></thead><tbody>${abSis.map((s, i) => `<tr><td>${i + 1}</td><td>${esc(s.nama || s.email || "-")}</td><td><div class="seg abseg" data-s="${s.id}">${["H", "I", "S", "A"].map((v) => `<button type="button" data-v="${v}" title="${AB[v]}" class="${abNilai[s.id] === v ? "on" : ""}">${v}</button>`).join("")}</div></td></tr>`).join("")}</tbody></table></div>
+    <button type="button" class="btn full" id="abSimpan" style="margin-top:14px">Simpan absensi</button>` : kosong("Belum ada siswa aktif di kelas ini.")}`;
+  $("#abSheet").classList.remove("hide"); abHitungTampil(); $("#abSheet").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+$("#abForm").onsubmit = async (e) => {
+  e.preventDefault(); const k = abKid(); if (!k) return alert("Buat dan pilih kelas dulu.");
+  const id = "p" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), mid = $("#abMapel").value;
+  const p = { kelasId: k, tanggal: $("#abTgl").value, mapelId: mid, mapelNama: mid ? mapelNama(mid) : "", topik: $("#abTopik").value.trim() };
+  try { await setDoc(doc(db, "pertemuan", id), { ...p, createdAt: serverTimestamp() }); $("#abTopik").value = ""; await abMuat(); await abBuka({ id, ...p }); } catch (er) { rulesHint(er); }
+};
+$("#abKelas").onchange = () => abMuat().catch((er) => alert(er.message));
+$("#abDaftar").onclick = async (e) => {
+  const b = e.target.closest("button"); if (!b) return;
+  try {
+    if (b.dataset.ab) await abBuka(abPert.find((p) => p.id === b.dataset.ab));
+    else if (b.dataset.abd && confirm("Hapus pertemuan ini beserta seluruh data kehadirannya?")) {
+      for (const d of (await getDocs(query(collection(db, "kehadiran"), where("pertemuanId", "==", b.dataset.abd)))).docs) await deleteDoc(doc(db, "kehadiran", d.id));
+      await deleteDoc(doc(db, "pertemuan", b.dataset.abd)); toast("Pertemuan dihapus"); await abMuat();
+    }
+  } catch (er) { rulesHint(er); }
+};
+$("#abSheet").onclick = async (e) => {
+  const b = e.target.closest("button"); if (!b) return;
+  if (b.id === "abTutup") { $("#abSheet").classList.add("hide"); abKini = null; }
+  else if (b.id === "abSemua") { abSis.forEach((s) => (abNilai[s.id] = "H")); $("#abSheet").querySelectorAll(".abseg button").forEach((x) => x.classList.toggle("on", x.dataset.v === "H")); abHitungTampil(); }
+  else if (b.dataset.v) { const sid = b.parentElement.dataset.s; abNilai[sid] = b.dataset.v; b.parentElement.querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === b)); abHitungTampil(); }
+  else if (b.id === "abSimpan" && abKini) {
+    const p = abKini, h = abHitungTampil(); b.disabled = true; b.textContent = "Menyimpan...";
+    try {
+      await Promise.all(abSis.map((s) => setDoc(doc(db, "kehadiran", p.id + "_" + s.id), { pertemuanId: p.id, siswaId: s.id, kelasId: p.kelasId, tanggal: p.tanggal, mapelNama: p.mapelNama || "", topik: p.topik || "", status: abNilai[s.id], updatedAt: serverTimestamp() })));
+      await updateDoc(doc(db, "pertemuan", p.id), { hitung: h, total: abSis.length, updatedAt: serverTimestamp() });
+      toast("Absensi tersimpan"); await abMuat();
+    } catch (er) { rulesHint(er); b.disabled = false; b.textContent = "Simpan absensi"; }
+  }
+};
+async function abRekap() {
+  const k = abKid(); if (!k) { $("#abRekapTbl").innerHTML = kosong("Belum ada kelas."); return; }
+  const kh = (await getDocs(query(collection(db, "kehadiran"), where("kelasId", "==", k)))).docs.map((d) => d.data());
+  const peta = {}; kh.forEach((x) => ((peta[x.siswaId] ||= {})[x.pertemuanId] = x.status));
+  const diisi = abPert.filter((p) => p.hitung).reverse();
+  const baris = abSis.map((s) => { const c = { H: 0, I: 0, S: 0, A: 0 }; const sel = diisi.map((p) => { const v = peta[s.id]?.[p.id] || ""; if (v) c[v]++; return v; }); return { s, sel, c, persen: abPersen(c.H, c.H + c.I + c.S + c.A) }; });
+  abData = { k, diisi, baris };
+  $("#abRekapTbl").innerHTML = !diisi.length ? kosong("Belum ada pertemuan yang diisi untuk kelas ini.") : `<table class="abt"><thead><tr><th>No</th><th>Nama siswa</th>${diisi.map((p) => `<th title="${esc(p.topik || p.mapelNama || "")}">${abPendek(p.tanggal)}</th>`).join("")}<th>H</th><th>I</th><th>S</th><th>A</th><th>%</th></tr></thead><tbody>${baris.map((b, i) => `<tr><td>${i + 1}</td><td>${esc(b.s.nama || b.s.email || "-")}</td>${b.sel.map((v) => `<td><span class="abc abc-${v || "x"}">${v || "-"}</span></td>`).join("")}<td>${b.c.H}</td><td>${b.c.I}</td><td>${b.c.S}</td><td>${b.c.A}</td><td><b>${b.persen}%</b></td></tr>`).join("")}</tbody><tfoot><tr><td></td><td>Hadir per pertemuan</td>${diisi.map((p) => `<td>${p.hitung.H}</td>`).join("")}<td colspan="5"></td></tr></tfoot></table>`;
+}
+$("#abTab").onclick = async (e) => {
+  const b = e.target.closest("button"); if (!b) return;
+  abTab = b.dataset.t; $("#abTab").querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === b));
+  $("#abPertemuan").classList.toggle("hide", abTab !== "pertemuan"); $("#abRekap").classList.toggle("hide", abTab !== "rekap");
+  if (abTab === "rekap") { try { await abRekap(); } catch (er) { $("#abRekapTbl").innerHTML = kosong("Gagal memuat: " + esc(er.message)); } }
+};
+$("#abXls").onclick = async (e) => {
+  if (!abData?.diisi.length) return toast("Belum ada data kehadiran untuk diekspor");
+  const { k, diisi, baris } = abData, btn = e.currentTarget, teks = btn.textContent; btn.disabled = true; btn.textContent = "Menyiapkan...";
+  const matriks = [["No", "Nama siswa", ...diisi.map((p) => p.tanggal), "Hadir", "Izin", "Sakit", "Alpa", "% Hadir"], ...baris.map((b, i) => [i + 1, b.s.nama || b.s.email || "-", ...b.sel, b.c.H, b.c.I, b.c.S, b.c.A, b.persen])];
+  const per = [["Tanggal", "Mapel", "Topik", "Hadir", "Izin", "Sakit", "Alpa", "% Hadir"], ...diisi.map((p) => [p.tanggal, p.mapelNama || "Umum", p.topik || "", p.hitung.H, p.hitung.I, p.hitung.S, p.hitung.A, abPersen(p.hitung.H, p.total)])];
+  try { await EX.unduhExcel([{ nama: "Kehadiran per siswa", rows: matriks }, { nama: "Per pertemuan", rows: per }], `rekap-kehadiran_${EX.aman(kelasNama(k))}_${new Date().toISOString().slice(0, 10)}.xlsx`); toast("File berhasil diunduh"); }
+  catch (er) { alert("Gagal ekspor: " + er.message); }
+  btn.disabled = false; btn.textContent = teks;
+};
+
+/* ===== Gamifikasi ===== */
+let gmCfg = GM.CFG_DEFAULT;
+const gmJam = (t) => (t?.seconds ? new Date(t.seconds * 1000).toLocaleString("id-ID", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "");
+async function gmMuatCfg() { try { const g = await getDoc(doc(db, "settings", "gamifikasi")); gmCfg = GM.cfgDari(g.exists() ? g.data() : {}); } catch {} return gmCfg; }
+async function gmTampil() {
+  const k = $("#gmKelas").value;
+  if (!k) { $("#gmInfo").textContent = ""; $("#gmTabel").innerHTML = kosong("Buat kelas dulu di menu Kelas."); return; }
+  const g = await getDoc(doc(db, "peringkat", k));
+  if (!g.exists()) { $("#gmInfo").textContent = "Belum pernah diterbitkan."; $("#gmTabel").innerHTML = kosong("Belum ada peringkat untuk kelas ini. Klik Hitung dan terbitkan."); return; }
+  const d = g.data(), rows = d.rows || [];
+  $("#gmInfo").textContent = "Terakhir diterbitkan: " + gmJam(d.updatedAt) + ". Siswa melihat peringkat sesuai waktu ini sampai Anda menerbitkan lagi.";
+  $("#gmTabel").innerHTML = rows.length ? `<table class="abt"><thead><tr><th>#</th><th>Nama siswa</th><th>Level</th><th>Selesai</th><th>Hadir</th><th>Poin</th></tr></thead><tbody>${rows.map((r, i) => `<tr><td>${i + 1}</td><td>${esc(r.nama)}</td><td>${esc(r.level)}</td><td>${r.selesai}</td><td>${r.hadir}</td><td><b>${r.poin}</b></td></tr>`).join("")}</tbody></table>` : kosong("Kelas ini belum punya siswa aktif.");
+}
+views.gamifikasi = async () => {
+  await Promise.all([loadKelas(), gmMuatCfg()]);
+  $("#gmTugas").value = gmCfg.tugas; $("#gmB90").value = gmCfg.bonus90; $("#gmB75").value = gmCfg.bonus75; $("#gmHadir").value = gmCfg.hadir; $("#gmPapan").checked = gmCfg.papan;
+  const v = $("#gmKelas").value;
+  $("#gmKelas").innerHTML = kelasAll.length ? kelasAll.map((k) => opt(k.id, "Kelas " + k.nama)).join("") : opt("", "Belum ada kelas");
+  if ([...$("#gmKelas").options].some((o) => o.value === v)) $("#gmKelas").value = v;
+  try { await gmTampil(); } catch (er) { $("#gmTabel").innerHTML = kosong("Gagal memuat: " + esc(er.message)); }
+};
+$("#gmKelas").onchange = () => gmTampil().catch(() => {});
+$("#gmForm").onsubmit = async (e) => {
+  e.preventDefault();
+  const n = (id) => Math.min(100, Math.max(0, Math.round(Number($(id).value) || 0)));
+  const d = { tugas: n("#gmTugas"), bonus90: n("#gmB90"), bonus75: n("#gmB75"), hadir: n("#gmHadir"), papan: $("#gmPapan").checked };
+  try { await setDoc(doc(db, "settings", "gamifikasi"), d); gmCfg = GM.cfgDari(d); toast("Aturan poin disimpan. Terbitkan ulang peringkat agar nilainya terhitung."); } catch (er) { rulesHint(er); }
+};
+$("#gmTerbit").onclick = async (e) => {
+  const btn = e.currentTarget, teks = btn.textContent; btn.disabled = true; btn.textContent = "Menghitung...";
+  try {
+    const cfg = await gmMuatCfg(); rekapCache = null;
+    const [selesai, hadir] = [await ambilSelesai(), await all("kehadiran")];
+    const siswa = (await getDocs(query(collection(db, "users"), where("role", "==", "siswa")))).docs.map((d) => ({ id: d.id, ...d.data() })).filter((u) => (u.status || "aktif") === "aktif");
+    for (const k of kelasAll) {
+      const rows = siswa.filter((u) => u.kelasId === k.id).map((u) => {
+        const st = GM.hitung(selesai.filter((x) => x.siswaId === u.id), hadir.filter((h) => h.siswaId === u.id), cfg);
+        return { id: u.id, nama: u.nama || u.email || "-", poin: st.poin, selesai: st.selesai, hadir: st.hadir, level: GM.levelDari(st.poin).nama };
+      }).sort((x, y) => y.poin - x.poin || y.selesai - x.selesai || x.nama.localeCompare(y.nama, "id"));
+      await setDoc(doc(db, "peringkat", k.id), { kelasNama: k.nama, rows, updatedAt: serverTimestamp() });
+    }
+    toast("Peringkat diterbitkan"); await gmTampil();
+  } catch (er) { rulesHint(er); }
+  btn.disabled = false; btn.textContent = teks;
+};
+
 /* ===== Pengumuman ===== */
 let pgAll = [], pgEdit = null;
 const pgTgl = (t) => (t?.seconds ? new Date(t.seconds * 1000).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }) : "baru saja");
