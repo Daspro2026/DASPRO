@@ -65,11 +65,13 @@ dialog{border:0;border-radius:22px;max-width:580px;width:calc(100% - 32px);paddi
 <div class="app"><main class="main">
   <section id="beranda"><div class="banner"><h1 id="sapa"></h1><p id="sub">Berikut ringkasan belajar Anda hari ini.</p></div>
     <div id="hint"></div><div class="grid g3" id="stat"></div>
+    <div id="gMini"></div>
     <div id="pgMini"></div>
     <div class="sec"><h2>Perlu dikerjakan</h2></div><div class="card"><ul class="list" id="tugasMini"></ul></div>
     <div class="sec"><h2>Mata pelajaran</h2></div><div class="grid gm" id="materiMini"></div></section>
   <section id="pengumuman" class="hide"><div class="ph"><div><h1>Pengumuman</h1><p>Informasi dari guru dan pengingat tenggat tugas.</p></div></div>
     <div id="pgRem"></div><div id="pgList"></div></section>
+  <section id="prestasi" class="hide"><div class="ph"><div><h1>Prestasi</h1><p>Poin, lencana, peringkat kelas, dan kehadiranmu.</p></div></div><div id="gmBody"></div></section>
   <section id="mapel" class="hide"><div class="ph"><div><h1>Mata pelajaran</h1><p>Pilih mata pelajaran untuk melihat materi, tugas, dan kuisnya.</p></div></div><div class="grid gm" id="mapelAll"></div></section>
   <section id="detail" class="hide"><button class="btn ghost sm" id="dBack" style="margin-bottom:16px">&larr; Semua mata pelajaran</button>
     <div class="ph"><div><h1 id="dNama"></h1><p>Materi, tugas, dan kuis mata pelajaran ini.</p><div id="dGuru" style="margin-top:12px"></div></div></div>
@@ -95,10 +97,11 @@ dialog{border:0;border-radius:22px;max-width:580px;width:calc(100% - 32px);paddi
 import { auth, db, collection, getDocs, getDoc, query, where, orderBy, doc, setDoc, updateDoc, serverTimestamp } from "./js/firebase.js";
 import { pasangGantiSandi } from "./js/reset.js";
 import * as SC from "./js/sertifikat.js";
+import * as GM from "./js/poin.js";
 import { guard, esc, $, safeUrl, fdate, icon, toast, UPLOAD, fileOk, mimeOf, fmtSize, fileChips, isImg, kecilkan, toB64 } from "./js/common.js";
 
 const views = {};
-const { user, profile, show } = await guard(false, [["beranda", "Beranda", "home"], ["pengumuman", "Pengumuman", "clock"], ["mapel", "Mata pelajaran", "book"], ["nilai", "Nilai", "star"], ["profil", "Profil", "users"]], views);
+const { user, profile, show } = await guard(false, [["beranda", "Beranda", "home"], ["pengumuman", "Pengumuman", "clock"], ["mapel", "Mata pelajaran", "book"], ["nilai", "Nilai", "star"], ["prestasi", "Prestasi", "star"], ["profil", "Profil", "users"]], views);
 const fetchAll = async (c) => (await getDocs(query(collection(db, c), orderBy("createdAt", "desc")))).docs.map((d) => ({ id: d.id, ...d.data() }));
 // Hemat kuota: daftar materi/tugas/kuis/mapel disimpan di browser dan hanya diunduh ulang jika guru mengubah isi (meta/versi).
 let ver = null;
@@ -239,7 +242,56 @@ views.pengumuman = () => {
     if (m) toast(m);
   }, 900);
 }
+/* ===== Gamifikasi & kehadiran ===== */
+let kehadiran = [], gmCfg = GM.CFG_DEFAULT;
+try { kehadiran = (await getDocs(query(collection(db, "kehadiran"), where("siswaId", "==", user.uid)))).docs.map((x) => ({ id: x.id, ...x.data() })); } catch {}
+try { const g = await getDoc(doc(db, "settings", "gamifikasi")); if (g.exists()) gmCfg = GM.cfgDari(g.data()); } catch {}
+const gmStat = () => GM.hitung(Object.values(subs).filter((s) => s.status === "selesai"), kehadiran, gmCfg);
+const ST = { H: "Hadir", I: "Izin", S: "Sakit", A: "Alpa" };
+function gmMini() {
+  const st = gmStat(), lv = GM.levelDari(st.poin);
+  $("#gMini").innerHTML = `<div class="card gmmini"><span class="gmbadge">${lv.i + 1}</span><div style="flex:1;min-width:0"><b>Level ${lv.nama} · ${st.poin} poin</b><div class="gmbar sm"><i style="width:${lv.persen}%"></i></div></div><button type="button" class="btn ghost sm" id="gmLihat">Lihat prestasi</button></div>`;
+  $("#gmLihat").onclick = () => show("prestasi");
+}
+async function gmPeringkat() {
+  const el = $("#gmPeringkat"), msg = (t) => (el.innerHTML = `<div class="card">${kosong(t)}</div>`);
+  if (!gmCfg.papan) return msg("Papan peringkat sedang dinonaktifkan oleh guru.");
+  if (!profile.kelasId) return msg("Pilih kelasmu di menu Profil untuk melihat peringkat kelas.");
+  try {
+    const g = await getDoc(doc(db, "peringkat", profile.kelasId));
+    if (!g.exists()) return msg("Peringkat belum diterbitkan oleh guru.");
+    const dt = g.data(), rows = dt.rows || [], me = rows.findIndex((r) => r.id === user.uid), medal = ["🥇", "🥈", "🥉"];
+    const baris = (r, i) => `<tr class="${r.id === user.uid ? "aku" : ""}"><td>${medal[i] || i + 1}</td><td>${esc(r.nama)}${r.id === user.uid ? " (kamu)" : ""}</td><td>${esc(r.level)}</td><td><b>${r.poin}</b></td></tr>`;
+    el.innerHTML = `<div class="card"><div style="overflow-x:auto"><table class="abt"><thead><tr><th>#</th><th>Nama</th><th>Level</th><th>Poin</th></tr></thead><tbody>${rows.slice(0, 10).map(baris).join("")}${me >= 10 ? `<tr><td colspan="4" class="mute" style="text-align:center">...</td></tr>${baris(rows[me], me)}` : ""}</tbody></table></div><p class="mute sm" style="margin-top:10px">Diperbarui ${dt.updatedAt?.seconds ? new Date(dt.updatedAt.seconds * 1000).toLocaleString("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "-"} oleh guru.</p></div>`;
+  } catch { msg("Peringkat belum bisa dimuat."); }
+}
+views.prestasi = () => {
+  const st = gmStat(), lv = GM.levelDari(st.poin), lc = GM.lencanaDari(st);
+  const urut = [...kehadiran].sort((a, b) => String(b.tanggal).localeCompare(String(a.tanggal)));
+  $("#gmBody").innerHTML = `
+    <div class="card gmhero"><div class="gmlv"><span class="gmbadge lg">${lv.i + 1}</span><div><small>Level kamu</small><h2>${lv.nama}</h2></div><div class="gmpoin"><b>${st.poin}</b><small>poin</small></div></div>
+      <div class="gmbar"><i style="width:${lv.persen}%"></i></div><p class="mute sm">${lv.next ? lv.butuh + " poin lagi menuju level " + lv.next : "Level tertinggi! Pertahankan ya."}</p></div>
+    <div class="grid g3" style="margin-top:16px"><div class="card gmst"><small>Tugas dan kuis selesai</small><b>${st.selesai}</b></div><div class="card gmst"><small>Rata-rata nilai</small><b>${st.selesai ? st.rata : "-"}</b></div><div class="card gmst"><small>Kehadiran</small><b>${st.pertemuan ? st.persenHadir + "%" : "-"}</b></div></div>
+    <div class="sec"><h2>Lencana</h2><span class="tag">${lc.filter((l) => l.dapat).length}/${lc.length}</span></div>
+    <div class="gmgrid">${lc.map((l) => `<div class="gml ${l.dapat ? "on" : ""}"><span>${l.ikon}</span><b>${l.nama}</b><small>${l.ket}</small></div>`).join("")}</div>
+    <div class="sec"><h2>Peringkat kelas</h2></div><div id="gmPeringkat"><div class="card">${kosong("Memuat...")}</div></div>
+    <div class="sec"><h2>Kehadiran</h2></div>
+    <div class="card"><div class="gmchips"><span class="tag ok">Hadir ${st.hadir}</span><span class="tag warn">Izin ${st.izin}</span><span class="tag warn">Sakit ${st.sakit}</span><span class="tag bad">Alpa ${st.alpa}</span></div>${urut.length ? `<ul class="list" style="margin-top:10px">${urut.slice(0, 8).map((k) => `<li><div><b>${esc(fdate(k.tanggal))}</b><div class="mute sm">${esc(k.mapelNama || "Umum")}${k.topik ? " · " + esc(k.topik) : ""}</div></div><span class="tag ${k.status === "H" ? "ok" : k.status === "A" ? "bad" : "warn"}">${ST[k.status] || k.status}</span></li>`).join("")}</ul>` : kosong("Belum ada data kehadiran.")}</div>`;
+  try { localStorage.setItem(lcKey, JSON.stringify(lc.filter((l) => l.dapat).map((l) => l.id))); } catch {}
+  gmPeringkat();
+};
+const lcKey = "daspro_lc_" + user.uid;
+{ // ikon piala + pemberitahuan lencana baru (sekali)
+  const ic = document.querySelector('.side nav [data-t="prestasi"] span');
+  if (ic) { ic.removeAttribute("data-ic"); ic.innerHTML = '<svg class="i" viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0V4zM17 5h3v2a3 3 0 01-3 3M7 5H4v2a3 3 0 003 3"/></svg>'; }
+  setTimeout(() => {
+    let lihat = []; try { lihat = JSON.parse(localStorage.getItem(lcKey) || "[]"); } catch {}
+    const baru = GM.lencanaDari(gmStat()).filter((l) => l.dapat && !lihat.includes(l.id));
+    if (baru.length) { toast("Lencana baru: " + baru.map((l) => l.ikon + " " + l.nama).join(", ")); try { localStorage.setItem(lcKey, JSON.stringify([...lihat, ...baru.map((l) => l.id)])); } catch {} }
+  }, 3800);
+}
 views.beranda = () => {
+  gmMini();
   pgMini();
   $("#sapa").textContent = "Halo, " + (profile.nama || "Siswa").split(" ")[0];
   $("#sub").textContent = (kelasNama(profile.kelasId) ? "Kelas " + kelasNama(profile.kelasId) + " · " : "") + "Berikut ringkasan belajar Anda hari ini.";
