@@ -233,3 +233,174 @@ a.fchip:hover{border-color:var(--b2);background:var(--soft);transform:translateY
 
 .sisbar .seg button{flex:none;padding:9px 16px;white-space:nowrap}
 #gMini{margin-top:16px}
+
+
+/* =====================================================================
+   MOBILE (HP) — nyaman untuk siswa & guru
+   Ditaruh paling bawah supaya menimpa aturan lama. Desktop tidak berubah.
+   ===================================================================== */
+
+/* Perangkat sentuh: matikan efek hover yang "menempel" setelah ditap */
+@media(hover:none){
+  .card.mat:hover,.card[data-m]:hover,.btn:hover,.btn.ghost:hover,.list li:hover .fi,.opt:hover,
+  .chips button:hover,a.fchip:hover,.drop:hover,.stat:hover .ic,.side nav button:hover{transform:none!important}
+  .btn:hover{filter:none}
+}
+
+/* Tombol Menu (dibuat JS) — disembunyikan di desktop */
+.mmore{display:none}
+.side nav button em{font-style:normal}
+.side nav button em.s{display:none}
+
+@media(max-width:860px){
+  :root{--bar:66px}
+  html{-webkit-text-size-adjust:100%;scroll-padding-bottom:90px}
+  body{overflow-x:hidden}
+  body.menu-open{overflow:hidden}
+  img,video,iframe,canvas{max-width:100%}
+
+  /* ---------- Kerangka ---------- */
+  .app{display:block}
+  .app .main{min-width:0;max-width:100%;padding:0 16px calc(var(--bar) + 34px + env(safe-area-inset-bottom,0px));overflow-wrap:anywhere}
+  .main>section{min-width:0}
+  .mtop{position:sticky;top:0;z-index:15;margin:0 -16px 16px;padding:calc(10px + env(safe-area-inset-top,0px)) 16px 10px;background:rgba(245,246,250,.96);border-bottom:1px solid var(--line)}
+  .mtop button{min-width:44px;min-height:44px;display:grid;place-items:center;border-radius:12px}
+
+  /* ---------- Judul, kartu, grid ---------- */
+  h1{font-size:1.35rem}
+  .ph{flex-direction:column;align-items:stretch;gap:12px;margin-bottom:18px}
+  .ph>.btn{width:100%}
+  .banner{padding:20px 18px;border-radius:20px;margin-bottom:16px}
+  .banner h1{font-size:1.3rem}
+  .card{padding:16px;border-radius:16px}
+  .page .card{padding:22px 18px;border-radius:22px}
+  .sec{margin:22px 0 10px}
+  .grid{gap:12px}
+  .g2,.gp,.gk,.gm{grid-template-columns:minmax(0,1fr)}
+  .g3,.g4{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .g3>:last-child:nth-child(odd),.g4>:last-child:nth-child(odd){grid-column:1/-1}
+  .ft .g3{grid-template-columns:minmax(0,1fr)}
+  .stat{flex-direction:column;align-items:flex-start;gap:10px}
+  .stat .ic{width:40px;height:40px;border-radius:12px}
+  .stat b{font-size:1.45rem}
+
+  /* ---------- Daftar ---------- */
+  .list li{margin:0;padding:12px 0;flex-wrap:wrap;gap:10px}
+  .list li>*{min-width:0}
+  .list li .btn,.list li button{min-height:40px}
+  .fi{width:40px;height:40px}
+  .card.mat{gap:10px}
+
+  /* ---------- Tabel: geser ke samping, bukan merusak halaman ---------- */
+  table{display:block;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;font-size:.84rem}
+  th,td{padding:10px 8px}
+  .card[style*="overflow-x"]{padding:8px}
+  /* Absensi: baris siswa jadi kartu ringkas (nama + tombol H I S A) */
+  .abt:has(.abseg),.abt:has(.abseg) tbody{display:block;overflow:visible}
+  .abt:has(.abseg) thead{display:none}
+  .abt:has(.abseg) tr{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--line)}
+  .abt:has(.abseg) td{border:0;padding:4px 0}
+  .abt:has(.abseg) td:first-child{width:22px;flex:none;color:var(--mute)}
+  .abt:has(.abseg) td:nth-child(2){flex:1;min-width:0}
+  .abt:has(.abseg) td:last-child{flex:none}
+  .abseg{gap:4px}
+  .abseg button{width:38px;height:40px;padding:0;font-size:.85rem}
+
+  /* ---------- Form: 16px mencegah browser HP memperbesar layar sendiri ---------- */
+  input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=range]):not([type=color]),select,textarea{font-size:16px!important;min-height:46px}
+  select[style*="width:auto"],input[style*="width:auto"]:not([type=checkbox]):not([type=radio]){width:100%!important;max-width:none!important;min-width:0!important;flex:1 1 100%}
+  input[type=checkbox],input[type=radio]{width:20px;height:20px}
+  textarea{min-height:100px}
+  label{margin:14px 0 6px}
+  .btn{min-height:46px}
+  .btn.sm{min-height:42px}
+  .btn.full{margin-top:16px}
+  .sisbar{gap:8px}
+  .sisbar .seg{overflow-x:auto;max-width:100%}
+  .tb .gchk{margin-left:0;width:100%}
+  .rt{justify-content:flex-start}
+  .md{padding:12px}
+
+  /* Tab kecil (mapel siswa / admin): geser horizontal, tidak turun baris */
+  #dTabs,#aTabs{flex-wrap:nowrap;overflow-x:auto;margin-left:-16px!important;margin-right:-16px!important;padding:2px 16px 8px;scrollbar-width:none}
+  #dTabs::-webkit-scrollbar,#aTabs::-webkit-scrollbar{display:none}
+  #dTabs button,#aTabs button{flex:none;min-height:40px;white-space:nowrap}
+  .chips button{min-height:36px}
+  .opt{padding:13px 14px}
+
+  /* ---------- Dialog jadi "bottom sheet" ---------- */
+  dialog{width:100%;max-width:100%;margin:auto 0 0;padding:20px 16px calc(20px + env(safe-area-inset-bottom,0px));border-radius:22px 22px 0 0;max-height:92vh;max-height:92dvh}
+  dialog[open]{animation:sheet .3s var(--ease)}
+  dialog[open]::backdrop{backdrop-filter:none}
+  @keyframes sheet{from{transform:translateY(100%)}}
+
+  /* ---------- Toast di atas navigasi bawah ---------- */
+  .toast{bottom:calc(var(--bar) + 16px + env(safe-area-inset-bottom,0px));width:max-content;max-width:calc(100% - 32px);text-align:center}
+
+  /* ---------- Ringankan animasi (HP murah) ---------- */
+  .main>section:not(.hide) .grid>*,.main>section:not(.hide) .list li,.main>section:not(.hide) .sec{animation:none}
+  .main>section:not(.hide){animation-duration:.25s}
+
+  /* ---------- Navigasi bawah: 4 menu utama + tombol Menu ---------- */
+  .app .side{position:fixed;inset:auto 0 0 0;width:auto;height:auto;z-index:30;display:flex;flex-direction:row;align-items:stretch;gap:0;
+    padding:6px 6px calc(6px + env(safe-area-inset-bottom,0px));border-radius:20px 20px 0 0;overflow:visible}
+  .side .logo,.side .me{display:none}
+  .side nav{display:flex;flex:4 1 0;min-width:0;flex-direction:row;gap:0;margin:0;padding:0;overflow:visible;-webkit-mask-image:none;mask-image:none}
+  .side nav .nl{display:none}
+  .side nav button:not([data-p]){display:none}
+  .side nav button,.side .mmore{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+    min-height:54px;padding:6px 2px;border-radius:14px;font-size:.68rem;font-weight:700;text-align:center;position:relative}
+  .side nav button svg.i,.side .mmore svg.i{width:22px;height:22px}
+  .side nav button em.f{display:none}
+  .side nav button em.s{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .side .mmore{border:0;background:none;color:#9CA7C4;font-family:inherit;cursor:pointer}
+  .side .mmore em{font-style:normal}
+  .side .mmore:active{background:rgba(255,255,255,.1)}
+  .side:not(.open):has(nav button.on:not([data-p])) .mmore{background:linear-gradient(120deg,var(--brand),var(--b2));color:#fff}
+  /* lencana angka (mis. pengumuman baru) menempel di pojok ikon */
+  .side nav button .nb{position:absolute;top:2px;left:calc(50% + 6px);margin:0!important;padding:1px 6px!important;font-size:.62rem;line-height:1.3;border:2px solid var(--nav2)}
+  .side nav button .nb::before{display:none}
+  /* titik penanda bila ada lencana di menu yang tersembunyi */
+  .side:not(.open):has(nav button:not([data-p]) .nb) .mmore::after{content:"";position:absolute;top:6px;left:calc(50% + 8px);width:9px;height:9px;border-radius:50%;background:#F59E0B;border:2px solid var(--nav2)}
+
+  /* ---------- Menu penuh (setelah tombol Menu ditekan) ---------- */
+  .app .side.open{inset:0;border-radius:0;flex-direction:column;gap:12px;overflow-y:auto;overscroll-behavior:contain;
+    padding:calc(16px + env(safe-area-inset-top,0px)) 16px calc(12px + env(safe-area-inset-bottom,0px));animation:fade .2s}
+  .side.open .me{display:flex;order:0}
+  .side.open nav{order:1;flex:none;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .side.open nav .nl{display:block;grid-column:1/-1;padding:12px 4px 0}
+  .side.open nav .nl:first-child{padding-top:0}
+  .side.open nav button:not([data-p]),.side.open nav button{display:flex}
+  .side.open nav button{flex-direction:row;justify-content:flex-start;gap:12px;min-height:52px;padding:12px 14px;font-size:.9rem;text-align:left;background:rgba(255,255,255,.06)}
+  .side.open nav button.on{background:linear-gradient(120deg,var(--brand),var(--b2))}
+  .side.open nav button em.f{display:block;min-width:0;line-height:1.2;white-space:normal;overflow-wrap:break-word}
+  .side.open nav button em.s{display:none}
+  .side.open nav button .nb{position:static;margin-left:auto!important;border:0}
+  .side.open .mmore{order:2;flex:none;flex-direction:row;gap:8px;min-height:52px;position:sticky;bottom:0;background:#26325C;color:#fff;font-size:.9rem}
+  .side.open .mmore::after{display:none}
+}
+
+/* HP kecil (≤ 380px) */
+@media(max-width:380px){
+  .app .main{padding-left:12px;padding-right:12px}
+  .mtop{margin-left:-12px;margin-right:-12px;padding-left:12px;padding-right:12px}
+  .side nav button,.side .mmore{font-size:.62rem}
+  .g3,.g4{gap:8px}
+  .card{padding:14px}
+}
+
+/* ---------- Halaman depan & login ---------- */
+@media(max-width:860px){
+  .nav{padding:14px 16px!important}
+  .nav .btn{padding:9px 14px;min-height:40px}
+  .hero{padding:24px 16px 36px!important;gap:28px!important}
+  .hero p.lead{margin:14px 0 22px}
+  .hero .btn{flex:1 1 100%}
+  .pv{padding:16px;border-radius:20px}
+  .ft{padding:6px 16px 30px!important}
+  .cta{margin:0 16px 36px!important;padding:26px 20px!important;text-align:center;justify-content:center}
+  .cta .btn{width:100%}
+  .page{padding:24px 16px 84px}
+  .bg span{animation:none;filter:blur(40px)}
+  body:has(input:focus) .ticker{display:none}
+}
