@@ -198,3 +198,38 @@ a.fchip:hover{border-color:var(--b2);background:var(--soft);transform:translateY
 .pgt{white-space:pre-wrap;word-break:break-word;margin:0 0 8px;color:var(--ink);line-height:1.55}
 .pgw{white-space:pre-wrap;word-break:break-word}
 .tag.bad{background:#FDE8E8;color:#B42318}
+
+/* ===== Absensi ===== */
+.abt{width:100%;border-collapse:collapse;font-size:.88rem}
+.abt th,.abt td{padding:9px 10px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+.abt th{font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;color:var(--mute);background:var(--bg)}
+.abt td:nth-child(2){white-space:normal;min-width:160px}
+.abt tfoot td{font-weight:700;color:var(--mute);border-bottom:0}
+.abt tr.aku td{background:var(--soft);font-weight:700}
+.abseg{margin-top:0;gap:4px}
+.abseg button{flex:none;width:36px;padding:6px 0;font-size:.8rem}
+.abseg button.on[data-v="H"]{background:#DCFCE7;border-color:#86EFAC;color:#166534}
+.abseg button.on[data-v="I"]{background:#FEF3C7;border-color:#FCD34D;color:#92400E}
+.abseg button.on[data-v="S"]{background:#DBEAFE;border-color:#93C5FD;color:#1E40AF}
+.abseg button.on[data-v="A"]{background:#FEE2E2;border-color:#FCA5A5;color:#B42318}
+.abc{display:inline-block;min-width:22px;text-align:center;padding:2px 0;border-radius:6px;font-weight:800;font-size:.78rem}
+.abc-H{background:#DCFCE7;color:#166534}.abc-I{background:#FEF3C7;color:#92400E}.abc-S{background:#DBEAFE;color:#1E40AF}.abc-A{background:#FEE2E2;color:#B42318}.abc-x{color:var(--mute)}
+
+/* ===== Gamifikasi ===== */
+.gmbadge{display:grid;place-items:center;width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,#F5B83D,#E8890C);color:#fff;font-weight:800;flex:none;box-shadow:0 8px 18px -8px #E8890C}
+.gmbadge.lg{width:56px;height:56px;font-size:1.5rem;border-radius:16px}
+.gmmini{display:flex;align-items:center;gap:14px;margin-bottom:6px}
+.gmhero .gmlv{display:flex;align-items:center;gap:14px;margin-bottom:14px}
+.gmhero small{color:var(--mute);font-weight:600}.gmhero h2{margin:0}
+.gmpoin{margin-left:auto;text-align:right}.gmpoin b{display:block;font-size:2rem;line-height:1;color:var(--brand)}
+.gmbar{height:12px;border-radius:99px;background:var(--bg);overflow:hidden}.gmbar.sm{height:8px;margin-top:6px}
+.gmbar i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--brand),#F5B83D);transition:width .6s var(--ease)}
+.gmst small{display:block;color:var(--mute);font-weight:600;font-size:.78rem}.gmst b{font-size:1.7rem}
+.gmgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+.gml{background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px 12px;text-align:center;opacity:.5;filter:grayscale(1)}
+.gml.on{opacity:1;filter:none;border-color:#F5D58A;background:linear-gradient(180deg,#FFFBEB,#fff)}
+.gml span{display:block;font-size:2rem;margin-bottom:6px}.gml b{display:block;font-size:.88rem}.gml small{display:block;color:var(--mute);font-size:.72rem;margin-top:4px;line-height:1.35}
+.gmchips{display:flex;gap:8px;flex-wrap:wrap}
+
+.sisbar .seg button{flex:none;padding:9px 16px;white-space:nowrap}
+#gMini{margin-top:16px}
