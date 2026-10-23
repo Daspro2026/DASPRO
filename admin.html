@@ -197,6 +197,17 @@ dialog{border:0;border-radius:22px;max-width:580px;width:calc(100% - 32px);paddi
       <button class="btn full">Simpan profil</button></form>
   </div></section>
 
+<section id="kalender" class="hide"><div class="ph"><div><h1>Kalender</h1><p>Tenggat tugas, jadwal kuis, dan pertemuan dalam satu tampilan.</p></div></div>
+  <div class="card" style="margin-bottom:18px"><div class="grid g2"><div><label style="margin-top:0">Kelas (untuk pertemuan)</label><select id="kaKelas"></select></div><div><label style="margin-top:0">Mata pelajaran</label><select id="kaMapel"></select></div></div>
+    <p class="mute sm" style="margin:10px 0 0">Tugas dan kuis berlaku untuk semua kelas. Ketuk agenda untuk membuka halaman pengelolaannya.</p></div>
+  <div id="kaSum"></div><div id="kaBox"></div></section>
+
+<section id="progres" class="hide"><div class="ph"><div><h1>Progres materi</h1><p>Lihat siswa yang sudah menandai materi selesai dan yang masih tertinggal.</p></div></div>
+  <div class="card" style="margin-bottom:18px"><div class="grid g2"><div><label style="margin-top:0">Kelas</label><select id="prKelas"></select></div><div><label style="margin-top:0">Mata pelajaran</label><select id="prMapel"></select></div></div></div>
+  <div id="prSum"></div>
+  <div class="grid g2" style="margin-top:18px;align-items:start"><div class="card"><h2>Per siswa</h2><p class="mute sm" style="margin:4px 0 0">Yang paling tertinggal tampil di atas.</p><ul class="list" id="prSiswa" style="margin-top:8px"></ul></div>
+    <div class="card"><h2>Per materi</h2><p class="mute sm" style="margin:4px 0 0">Materi yang paling jarang diselesaikan tampil di atas.</p><ul class="list" id="prMateri" style="margin-top:8px"></ul></div></div></section>
+
 <section id="absensi" class="hide"><div class="ph"><div><h1>Absensi</h1><p>Catat kehadiran siswa per pertemuan, lalu lihat rekapnya per kelas.</p></div></div>
   <div class="sisbar"><select id="abKelas" style="width:auto;min-width:200px"></select>
     <div class="seg" id="abTab" style="margin-top:0"><button type="button" data-t="pertemuan" class="on">Pertemuan</button><button type="button" data-t="rekap">Rekap kelas</button></div></div>
@@ -290,10 +301,12 @@ import { pasangGantiSandi } from "./js/reset.js";
 import * as SC from "./js/sertifikat.js";
 import * as EX from "./js/ekspor.js";
 import * as GM from "./js/poin.js";
+import * as KAL from "./js/kalender.js";
+import * as PR from "./js/progres.js";
 import { guard, esc, $, ago, icon, toast, applySettings, safeUrl, fileChips, fdate } from "./js/common.js";
 
 const views = {};
-const { show, user: akun, profile: akunProfil } = await guard(true, [["ringkasan", "Ringkasan", "grid"], ["pengumuman", "Pengumuman", "clock"], ["mapel", "Mata pelajaran", "book"], ["kelas", "Kelas", "users"], ["siswa", "Siswa", "users"], ["daftar", "Pendaftaran", "key"], ["konten", "Materi & Tugas", "upload"], ["kuis", "Kuis", "edit"], ["sertif", "Sertifikat", "star"], ["periksa", "Periksa", "check"], ["nilaiS", "Rekap nilai", "star"], ["analitik", "Analitik", "chart"], ["absensi", "Absensi", "check"], ["gamifikasi", "Gamifikasi", "star"], ["profilG", "Profil", "users"], ["setelan", "Pengaturan", "sliders"]], views);
+const { show, user: akun, profile: akunProfil } = await guard(true, [["ringkasan", "Ringkasan", "grid"], ["pengumuman", "Pengumuman", "clock"], ["mapel", "Mata pelajaran", "book"], ["kelas", "Kelas", "users"], ["siswa", "Siswa", "users"], ["daftar", "Pendaftaran", "key"], ["konten", "Materi & Tugas", "upload"], ["kuis", "Kuis", "edit"], ["sertif", "Sertifikat", "star"], ["kalender", "Kalender", "clock"], ["progres", "Progres materi", "book"], ["periksa", "Periksa", "check"], ["nilaiS", "Rekap nilai", "star"], ["analitik", "Analitik", "chart"], ["absensi", "Absensi", "check"], ["gamifikasi", "Gamifikasi", "star"], ["profilG", "Profil", "users"], ["setelan", "Pengaturan", "sliders"]], views);
 const all = async (c) => (await getDocs(collection(db, c))).docs.map((d) => ({ id: d.id, ...d.data() }));
 const kosong = (t) => `<div class="empty">${t}</div>`;
 $("#keP").onclick = () => show("periksa");
@@ -1039,6 +1052,62 @@ async function gmTampil() {
   $("#gmInfo").textContent = "Terakhir diterbitkan: " + gmJam(d.updatedAt) + ". Siswa melihat peringkat sesuai waktu ini sampai Anda menerbitkan lagi.";
   $("#gmTabel").innerHTML = rows.length ? `<table class="abt"><thead><tr><th>#</th><th>Nama siswa</th><th>Level</th><th>Selesai</th><th>Hadir</th><th>Poin</th></tr></thead><tbody>${rows.map((r, i) => `<tr><td>${i + 1}</td><td>${esc(r.nama)}</td><td>${esc(r.level)}</td><td>${r.selesai}</td><td>${r.hadir}</td><td><b>${r.poin}</b></td></tr>`).join("")}</tbody></table>` : kosong("Kelas ini belum punya siswa aktif.");
 }
+/* ===== Kalender & progres materi ===== */
+{
+  const nv = (t) => document.querySelector(`.side nav [data-t="${t}"] span`);
+  const ic = nv("kalender"); if (ic) { ic.removeAttribute("data-ic"); ic.innerHTML = '<svg class="i" viewBox="0 0 24 24"><path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z"/></svg>'; }
+}
+const isiSel = (el, html) => { const v = el.value; el.innerHTML = html; if ([...el.options].some((o) => o.value === v)) el.value = v; };
+const siapRef = () => Promise.all([mapelAll.length ? 0 : loadMapel(), kelasAll.length ? 0 : loadKelas()]);
+let kaData = null; const kaState = {};
+function kaGambar() {
+  if (!kaData) return;
+  const fk = $("#kaKelas").value, fm = $("#kaMapel").value;
+  const ev = KAL.susunEvent({ tugas: kaData.tg, kuis: kaData.ks, pertemuan: kaData.pt.filter((p) => fk === "*" || p.kelasId === fk), subs: null, mapelNama: (x) => mapelNama(mOf(x.mapelId || "")), filterMapel: fm === "*" ? null : fm });
+  $("#kaSum").innerHTML = KAL.ringkasanHtml(ev, true);
+  KAL.renderKalender($("#kaBox"), ev, { state: kaState, onKlik: (x) => show(x.jenis === "pertemuan" ? "absensi" : x.jenis === "tugas" ? "konten" : "kuis") });
+}
+views.kalender = async () => {
+  try {
+    await siapRef();
+    isiSel($("#kaKelas"), opt("*", "Semua kelas") + kelasAll.map((k) => opt(k.id, k.nama)).join(""));
+    isiSel($("#kaMapel"), opt("*", "Semua mata pelajaran") + opt("", "Umum") + mapelAll.map((m) => opt(m.id, m.nama)).join(""));
+    const dari = new Date(); dari.setDate(dari.getDate() - 62); // pertemuan 2 bulan terakhir dan seterusnya (hemat baca)
+    const [tg, ks, pt] = await Promise.all([all("tugas"), all("kuis"), getDocs(query(collection(db, "pertemuan"), where("tanggal", ">=", KAL.ymd(dari)))).then((s) => s.docs.map((d) => ({ id: d.id, ...d.data() })))]);
+    kaData = { tg, ks, pt };
+  } catch (er) { return rulesHint(er); }
+  $("#kaKelas").onchange = $("#kaMapel").onchange = kaGambar;
+  kaGambar();
+};
+
+let prData = null;
+function prGambar() {
+  if (!prData) return;
+  const fk = $("#prKelas").value, fm = $("#prMapel").value;
+  const mt = prData.mt.filter((m) => fm === "*" || mOf(m.mapelId || "") === fm);
+  const us = prData.us.filter((u) => fk === "*" || kOf(u.kelasId) === fk).map((u) => {
+    const mp = prData.pg[u.id] || {}, n = mt.filter((m) => mp[m.id]).length;
+    return { u, n, p: mt.length ? Math.round((n / mt.length) * 100) : 0 };
+  }).sort((x, y) => x.p - y.p || (x.u.nama || "").localeCompare(y.u.nama || "", "id"));
+  const rata = us.length && mt.length ? Math.round(us.reduce((s, x) => s + x.p, 0) / us.length) : 0;
+  const tuntas = mt.length ? us.filter((x) => x.p === 100).length : 0, belum = us.filter((x) => x.n === 0).length;
+  $("#prSum").innerHTML = `<div class="kal-sum">${[["Rata-rata progres", rata + "%", ""], ["Siswa tuntas", tuntas, ""], ["Belum mulai", belum, belum ? "warn" : ""]].map(([l, n, c]) => `<div class="card kal-s ${c}"><b>${n}</b><span>${l}</span></div>`).join("")}</div>`;
+  const bar = (n, total) => { const h = { n, total, persen: total ? Math.round((n / total) * 100) : 0 }; return `<div class="pr-mini">${PR.barHtml(h)}<small>${n}/${total}</small></div>`; };
+  $("#prSiswa").innerHTML = !mt.length ? `<li>${kosong("Belum ada materi pada pilihan ini.")}</li>` : us.length ? us.map(({ u, n, p }) => `<li class="pr-row"><div class="row" style="flex:1;min-width:0"><div class="av" style="overflow:hidden">${avHtml(u.foto, u.nama || u.email)}</div><div class="pr-info"><b>${esc(u.nama || u.email || "-")}</b>${fk === "*" ? `<div class="mute sm">${esc(u.kelasId && kOf(u.kelasId) ? kelasNama(u.kelasId) : "Tanpa kelas")}</div>` : ""}${bar(n, mt.length)}</div></div><span class="pr-pct" style="color:${p === 100 ? "var(--ok)" : p === 0 ? "var(--warn)" : "var(--ink)"}">${p}%</span></li>`).join("") : `<li>${kosong("Tidak ada siswa di kelas ini.")}</li>`;
+  const pm = mt.map((m) => ({ m, n: us.filter((x) => (prData.pg[x.u.id] || {})[m.id]).length })).sort((x, y) => x.n - y.n || (x.m.judul || "").localeCompare(y.m.judul || "", "id"));
+  $("#prMateri").innerHTML = pm.length && us.length ? pm.map(({ m, n }) => `<li class="pr-row"><div class="pr-info"><b title="${esc(m.judul)}">${esc(m.judul)}</b><div class="mute sm">${esc(mapelNama(mOf(m.mapelId || "")))}</div>${bar(n, us.length)}</div></li>`).join("") : `<li>${kosong("Belum ada data.")}</li>`;
+}
+views.progres = async () => {
+  try {
+    await siapRef();
+    const [mt, us, pg] = await Promise.all([all("materi"), getDocs(query(collection(db, "users"), where("role", "==", "siswa"))).then((s) => s.docs.map((d) => ({ id: d.id, ...d.data() }))), PR.semua()]);
+    prData = { mt, us: us.filter((u) => (u.status || "aktif") === "aktif"), pg };
+    isiSel($("#prKelas"), opt("*", "Semua kelas") + kelasAll.map((k) => opt(k.id, k.nama)).join("") + opt("", "Tanpa kelas"));
+    isiSel($("#prMapel"), opt("*", "Semua mata pelajaran") + opt("", "Umum") + mapelAll.map((m) => opt(m.id, m.nama)).join(""));
+  } catch (er) { return rulesHint(er); }
+  $("#prKelas").onchange = $("#prMapel").onchange = prGambar;
+  prGambar();
+};
 views.gamifikasi = async () => {
   await Promise.all([loadKelas(), gmMuatCfg()]);
   $("#gmTugas").value = gmCfg.tugas; $("#gmB90").value = gmCfg.bonus90; $("#gmB75").value = gmCfg.bonus75; $("#gmHadir").value = gmCfg.hadir; $("#gmPapan").checked = gmCfg.papan; $("#gmTop").value = String([3, 5, 10].includes(gmCfg.papanTop) ? gmCfg.papanTop : 10);
