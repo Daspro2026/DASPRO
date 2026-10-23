@@ -102,6 +102,7 @@ import * as SC from "./js/sertifikat.js";
 import * as GM from "./js/poin.js";
 import * as KAL from "./js/kalender.js";
 import * as PR from "./js/progres.js";
+import * as IG from "./js/integritas.js";
 import { guard, esc, $, safeUrl, fdate, icon, toast, UPLOAD, fileOk, mimeOf, fmtSize, fileChips, isImg, kecilkan, toB64 } from "./js/common.js";
 
 const views = {};
@@ -172,7 +173,7 @@ const kuisApi = async (aksi, data) => {
   return res;
 };
 const fmtWaktu = (ms) => new Date(ms).toLocaleString("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
-let timerKuis = null;
+let timerKuis = null, igAktif = null; // igAktif: pelacak perpindahan tab untuk kuis yang sedang dikerjakan
 const reviewHtml = (rv) => (rv || []).map((q, i) => `<div class="ans" style="margin-top:10px"><b>${i + 1}. ${esc(q.teks)}</b>
   <div class="sm" style="margin-top:6px">Jawaban Anda: ${esc(q.j || "-")} ${q.ok === true ? '<span class="tag ok">Benar</span>' : q.ok === false ? '<span class="tag warn">Salah</span>' : ""}</div>
   ${q.kunci ? `<div class="sm mute">Kunci: ${esc(q.kunci)}</div>` : ""}${q.pembahasan ? `<div class="sm" style="margin-top:6px">${esc(q.pembahasan)}</div>` : ""}</div>`).join("");
@@ -372,7 +373,7 @@ views.nilai = () => {
   $("#nilaiTbl").innerHTML = r.length ? `<table><tr><th>Mapel</th><th>Tugas / kuis</th><th>Nilai</th><th>Umpan balik</th><th>Sertifikat</th></tr>${r.map(([id, s]) => { const src = [...tugas, ...kuis].find((x) => x.id === id); return `<tr><td>${esc(src ? namaMapel(src) : "Umum")}</td><td><b>${esc(s.tugasJudul)}</b></td><td><span class="tag ok">${esc(s.nilai)}</span></td><td class="mute">${esc(s.feedback || "-")}</td><td>${src ? sertTag(src) : ""}</td></tr>`; }).join("")}</table>` : kosong("Belum ada nilai.");
 };
 $("#tutup").onclick = () => $("#dlg").close();
-$("#dlg").addEventListener("close", () => clearInterval(timerKuis));
+$("#dlg").addEventListener("close", () => { clearInterval(timerKuis); igAktif?.berhenti(); igAktif = null; });
 
 function buka(id) {
   const t = tugas.find((x) => x.id === id), s = subs[id];
@@ -446,7 +447,7 @@ function kerjakan(id) {
   if (k.buka && now < k.buka) h += '<p class="mute" style="margin-top:14px">Kuis ini belum dibuka.</p>';
   else if (k.tutup && now > k.tutup) h += '<p class="mute" style="margin-top:14px">Kuis ini sudah ditutup.</p>';
   else if (pakai >= maks) h += '<p class="mute sm" style="margin-top:12px">Kesempatan mengerjakan sudah habis.</p>';
-  else h += `<button class="btn full" id="mulaiBtn">${s ? "Coba lagi" : "Mulai kuis"}</button>${k.durasi ? '<p class="mute sm" style="margin-top:8px;text-align:center">Waktu mulai berjalan setelah tombol ditekan.</p>' : ""}`;
+  else h += `${IG.catatanHtml()}<button class="btn full" id="mulaiBtn">${s ? "Coba lagi" : "Mulai kuis"}</button>${k.durasi ? '<p class="mute sm" style="margin-top:8px;text-align:center">Waktu mulai berjalan setelah tombol ditekan.</p>' : ""}`;
   if (s && k.pembahasan && k.pembahasan !== "tidak") h += '<button class="btn ghost full" id="bhsBtn" style="margin-top:10px">Lihat pembahasan</button>';
   $("#isi").innerHTML = h;
   if ($("#mulaiBtn")) $("#mulaiBtn").onclick = () => mulaiKuis(k);
@@ -462,7 +463,10 @@ async function mulaiKuis(k) {
   try {
     const r = await kuisApi("mulai", { kuisId: k.id });
     const t0 = Date.now(); let terkirim = false;
-    $("#isi").innerHTML = `<div style="position:sticky;top:-30px;background:#fff;padding:8px 0 10px;z-index:2;display:flex;justify-content:space-between;align-items:center"><b>${esc(k.judul)}</b><span class="tag warn" id="tmr" style="font-size:.9rem"></span></div>
+    igAktif?.berhenti();
+    const ig = (igAktif = IG.lacak(`${user.uid}_${k.id}_${r.n}`, (st, jeda) => { igPaint(); if (jeda) toast(`Kamu meninggalkan halaman kuis (${st.pindah}x). Ini dicatat dan dapat dilihat guru.`); }));
+    const igPaint = () => { const e = $("#igTag"); if (!e) return; const n = ig.ambil().pindah; e.textContent = "Pindah tab: " + n; e.className = "tag ig-tag" + (n ? " warn" : ""); };
+    $("#isi").innerHTML = `<div style="position:sticky;top:-30px;background:#fff;padding:8px 0 10px;z-index:2;display:flex;justify-content:space-between;align-items:center"><b>${esc(k.judul)}</b><span style="display:flex;gap:8px;align-items:center"><span class="tag ig-tag" id="igTag" title="Perpindahan tab atau aplikasi dicatat dan dapat dilihat guru"></span><span class="tag warn" id="tmr" style="font-size:.9rem"></span></span></div>
       <form id="kf">${r.soal.map((q, i) => `<div style="margin-top:20px"><b>${i + 1}. ${esc(q.teks)}</b>${
         q.tipe === "isian" ? `<input name="q${i}" placeholder="Ketik jawaban singkat" autocomplete="off" style="margin-top:8px">`
         : q.tipe === "esai" ? `<textarea name="q${i}" placeholder="Tulis jawaban Anda" style="margin-top:8px"></textarea>`
@@ -475,13 +479,14 @@ async function mulaiKuis(k) {
       if (!otomatis && !await konfirmasi(belum ? `Masih ada ${belum} soal belum dijawab. Kirim sekarang?` : "Kirim jawaban? Jawaban tidak bisa diubah.")) return;
       terkirim = true; clearInterval(timerKuis); const tb = $("#kf button"); tb.disabled = true; tb.textContent = "Menghitung nilai...";
       try {
-        const res = await kuisApi("kirim", { kuisId: k.id, jawaban });
+        const res = await kuisApi("kirim", { kuisId: k.id, jawaban, ig: ig.ambil() }); ig.selesai(); igAktif = null;
         subs[k.id] = { ...(subs[k.id] || {}), status: res.status, nilai: res.terbaik, feedback: res.feedback, percobaan: res.percobaan, tugasJudul: "Kuis: " + k.judul };
         views.beranda(); refreshDetail();
         $("#isi").innerHTML = `<h1 style="font-size:1.35rem">${esc(k.judul)}</h1><div class="ans" style="text-align:center;margin-top:14px">${res.status === "selesai" ? `<div class="score">${esc(res.nilai)}</div>` : '<p>Jawaban terkirim. Menunggu diperiksa guru.</p>'}<p class="mute" style="margin-top:6px">${esc(res.feedback || "")}</p><p class="mute sm">Percobaan ${res.percobaan} dari ${res.maks}</p></div>${res.review ? reviewHtml(res.review) : ""}<button class="btn full" id="lagi">Kembali</button>`;
         $("#lagi").onclick = () => kerjakan(k.id);
       } catch (er) { terkirim = false; alert(er.message); tb.disabled = false; tb.textContent = "Kirim jawaban"; }
     };
+    igPaint();
     $("#kf").onsubmit = (e) => { e.preventDefault(); kirim(false); };
     if (r.sisaMs > 0) {
       const akhir = t0 + r.sisaMs;
