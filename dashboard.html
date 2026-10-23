@@ -69,12 +69,14 @@ dialog{border:0;border-radius:22px;max-width:580px;width:calc(100% - 32px);paddi
     <div id="pgMini"></div>
     <div class="sec"><h2>Perlu dikerjakan</h2></div><div class="card"><ul class="list" id="tugasMini"></ul></div>
     <div class="sec"><h2>Mata pelajaran</h2></div><div class="grid gm" id="materiMini"></div></section>
+  <section id="kalender" class="hide"><div class="ph"><div><h1>Kalender</h1><p>Semua tenggat tugas, kuis, dan pertemuan kelasmu di satu tempat.</p></div></div>
+    <div id="kalSum"></div><div id="kalBox"></div></section>
   <section id="pengumuman" class="hide"><div class="ph"><div><h1>Pengumuman</h1><p>Informasi dari guru dan pengingat tenggat tugas.</p></div></div>
     <div id="pgRem"></div><div id="pgList"></div></section>
   <section id="prestasi" class="hide"><div class="ph"><div><h1>Prestasi</h1><p>Poin, lencana, peringkat kelas, dan kehadiranmu.</p></div></div><div id="gmBody"></div></section>
   <section id="mapel" class="hide"><div class="ph"><div><h1>Mata pelajaran</h1><p>Pilih mata pelajaran untuk melihat materi, tugas, dan kuisnya.</p></div></div><div class="grid gm" id="mapelAll"></div></section>
   <section id="detail" class="hide"><button class="btn ghost sm" id="dBack" style="margin-bottom:16px">&larr; Semua mata pelajaran</button>
-    <div class="ph"><div><h1 id="dNama"></h1><p>Materi, tugas, dan kuis mata pelajaran ini.</p><div id="dGuru" style="margin-top:12px"></div></div></div>
+    <div class="ph"><div><h1 id="dNama"></h1><p>Materi, tugas, dan kuis mata pelajaran ini.</p><div id="dGuru" style="margin-top:12px"></div><div id="dProg"></div></div></div>
     <style>#dTabs button{padding:8px 16px;font-size:.85rem}#dTabs button.on{background:var(--soft);color:var(--brand);border-color:var(--b2)}.opt{display:flex;align-items:center;gap:10px;padding:11px 14px;border:1px solid var(--line);border-radius:12px;cursor:pointer;margin:8px 0 0;font-size:.92rem;font-weight:500;color:var(--ink)}.opt input{width:auto;padding:0;accent-color:var(--brand);flex:none}.opt:has(input:checked){border-color:var(--brand);background:var(--soft)}</style>
     <div class="chips" id="dTabs" style="margin:0 0 20px"></div><div id="dIsi"></div></section>
   <section id="profil" class="hide"><div class="ph"><div><h1>Profil saya</h1><p>Lengkapi data diri dan pilih kelas Anda.</p></div></div>
@@ -98,10 +100,12 @@ import { auth, db, collection, getDocs, getDoc, query, where, orderBy, doc, setD
 import { pasangGantiSandi } from "./js/reset.js";
 import * as SC from "./js/sertifikat.js";
 import * as GM from "./js/poin.js";
+import * as KAL from "./js/kalender.js";
+import * as PR from "./js/progres.js";
 import { guard, esc, $, safeUrl, fdate, icon, toast, UPLOAD, fileOk, mimeOf, fmtSize, fileChips, isImg, kecilkan, toB64 } from "./js/common.js";
 
 const views = {};
-const { user, profile, show } = await guard(false, [["beranda", "Beranda", "home"], ["pengumuman", "Pengumuman", "clock"], ["mapel", "Mata pelajaran", "book"], ["nilai", "Nilai", "star"], ["prestasi", "Prestasi", "star"], ["profil", "Profil", "users"]], views);
+const { user, profile, show } = await guard(false, [["beranda", "Beranda", "home"], ["kalender", "Kalender", "clock"], ["pengumuman", "Pengumuman", "clock"], ["mapel", "Mata pelajaran", "book"], ["nilai", "Nilai", "star"], ["prestasi", "Prestasi", "star"], ["profil", "Profil", "users"]], views);
 const fetchAll = async (c) => (await getDocs(query(collection(db, c), orderBy("createdAt", "desc")))).docs.map((d) => ({ id: d.id, ...d.data() }));
 // Hemat kuota: daftar materi/tugas/kuis/mapel disimpan di browser dan hanya diunduh ulang jika guru mengubah isi (meta/versi).
 let ver = null;
@@ -118,10 +122,11 @@ const mapelList = (await load("mapel")).reverse();
 const subs = {};
 (await getDocs(query(collection(db, "submissions"), where("siswaId", "==", user.uid)))).docs.forEach((d) => (subs[d.data().tugasId] = d.data()));
 
+const pr = PR.buat(user.uid); await pr.muat(); // progres materi: 1 dokumen per siswa
 const status = (id) => { const s = subs[id]; return !s ? '<span class="tag warn">Belum dikumpulkan</span>' : s.status === "selesai" ? `<span class="tag ok">Nilai ${esc(s.nilai)}</span>` : '<span class="tag">Menunggu nilai</span>'; };
-const mCard = (m) => `<div class="card mat"><div class="row"><div class="fi">${icon(m.tipe === "modul" ? "book" : "file")}</div><span class="tag">${esc(m.tipe)}</span></div>
+const mCard = (m) => `<div class="card mat${pr.ada(m.id) ? " pr-done" : ""}"><div class="row"><div class="fi">${icon(m.tipe === "modul" ? "book" : "file")}</div><span class="tag">${esc(m.tipe)}</span></div>
   <div><h2>${esc(m.judul)}</h2></div><p class="mute sm">${esc(m.deskripsi || "")}</p>
-  <div style="display:flex;gap:8px;flex-wrap:wrap">${linkBtns(m)}</div></div>`;
+  <div style="display:flex;gap:8px;flex-wrap:wrap">${linkBtns(m)}${PR.tombol(m.id, pr.ada(m.id))}</div></div>`;
 const tItem = (t) => `<li><a href="#" data-id="${t.id}" class="row"><div class="fi">${icon("task")}</div><div><b>${esc(t.judul)}</b><div class="mute sm">${t.deadline ? "Tenggat " + fdate(t.deadline) : "Tanpa tenggat"}</div></div></a><span class="rt">${status(t.id)}${sertTag(t)}</span></li>`;
 const bind = (root) => document.querySelectorAll(root + " a[data-id]").forEach((a) => (a.onclick = (e) => { e.preventDefault(); buka(a.dataset.id); }));
 const kosong = (t) => `<div class="empty">${t}</div>`;
@@ -155,7 +160,7 @@ const mapelCard = (m) => {
   const M = inMapel(materi, m.id), T = inMapel(tugas, m.id), K = inMapel(kuis, m.id);
   const pending = [...T, ...K].filter((x) => !subs[x.id]).length;
   return `<div class="card mat" data-m="${esc(m.id)}" style="cursor:pointer"><div class="row"><div class="fi">${icon("book")}</div>${pending ? `<span class="tag warn">${pending} belum dikerjakan</span>` : '<span class="tag ok">Terkini</span>'}</div>
-    <div><h2>${esc(m.nama)}</h2></div>${guruRow(m)}<p class="mute sm">${M.length} materi · ${T.length} tugas · ${K.length} kuis</p></div>`;
+    <div><h2>${esc(m.nama)}</h2></div>${guruRow(m)}<p class="mute sm">${M.length} materi · ${T.length} tugas · ${K.length} kuis</p>${prMini(M)}</div>`;
 };
 const bindMapel = (root) => document.querySelectorAll(root + " [data-m]").forEach((c) => (c.onclick = () => openMapel(c.dataset.m)));
 const kuisApi = async (aksi, data) => {
@@ -307,6 +312,38 @@ views.beranda = () => {
   $("#materiMini").innerHTML = allMapel().slice(0, 3).map(mapelCard).join("") || kosong("Belum ada mata pelajaran dari guru.");
   bindMapel("#materiMini");
 };
+/* ===== Kalender & progres materi ===== */
+const prMini = (M) => { if (!M.length) return ""; const h = pr.hitung(M); return `<div class="pr-mini" title="Progres materi">${PR.barHtml(h)}<small>${h.n}/${h.total} materi</small></div>`; };
+const progHead = (M) => { const h = pr.hitung(M); return `<div class="pr-head"><div class="pr-mini">${PR.barHtml(h)}<small>${h.n}/${h.total} materi selesai · ${h.persen}%</small></div></div>`; };
+PR.pasangKlik(pr, () => {
+  if (curMapel === null || $("#detail").classList.contains("hide")) return;
+  const M = inMapel(materi, curMapel), h = pr.hitung(M);
+  $("#dProg").innerHTML = progHead(M);
+  if (h.total && h.persen === 100) toast("Semua materi di mata pelajaran ini sudah selesai 🎉");
+});
+let kalPert = null; const kalState = {};
+views.kalender = async () => {
+  if (kalPert === null) { // pertemuan kelas sendiri: dibaca sekali per sesi, hanya saat tab ini dibuka
+    kalPert = [];
+    if (profile.kelasId) { try { kalPert = (await getDocs(query(collection(db, "pertemuan"), where("kelasId", "==", profile.kelasId)))).docs.map((x) => ({ id: x.id, ...x.data() })); } catch {} }
+  }
+  const ev = KAL.susunEvent({ tugas, kuis, pertemuan: kalPert, subs, mapelNama: namaMapel });
+  $("#kalSum").innerHTML = KAL.ringkasanHtml(ev);
+  KAL.renderKalender($("#kalBox"), ev, { state: kalState, onKlik: (x) => { if (x.jenis === "tugas") buka(x.ref); else if (x.jenis === "kuis" || x.jenis === "buka") kerjakan(x.ref); } });
+};
+function kalBadge() { // angka di menu: tugas jatuh tempo/terlewat dan kuis yang tutup hari ini
+  const b = document.querySelector('.side nav button[data-t="kalender"]'); if (!b) return;
+  b.querySelector(".nb")?.remove();
+  const n = KAL.susunEvent({ tugas, kuis, subs, mapelNama: namaMapel }).filter((x) => x.selesai === false && (x.jenis === "tugas" ? KAL.sisa(x.tgl) <= 0 : x.jenis === "kuis" && KAL.sisa(x.tgl) === 0)).length;
+  if (n) b.insertAdjacentHTML("beforeend", `<span class="tag warn nb" style="margin-left:auto;padding:2px 8px">${n}</span>`);
+}
+{
+  const nv = (t) => document.querySelector(`.side nav [data-t="${t}"]`);
+  const ic = nv("kalender")?.querySelector("span");
+  if (ic) { ic.removeAttribute("data-ic"); ic.innerHTML = '<svg class="i" viewBox="0 0 24 24"><path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z"/></svg>'; }
+  nv("kalender")?.setAttribute("data-p", ""); nv("nilai")?.removeAttribute("data-p"); // HP: Kalender masuk bilah bawah, Nilai pindah ke tombol Menu
+  const b0 = views.beranda; views.beranda = () => { b0(); kalBadge(); }; kalBadge();
+}
 views.mapel = () => { $("#mapelAll").innerHTML = allMapel().map(mapelCard).join("") || kosong("Belum ada mata pelajaran dari guru."); bindMapel("#mapelAll"); };
 function openMapel(id) {
   curMapel = id; curTab = "materi"; show("detail");
@@ -321,6 +358,7 @@ function renderDetail() {
   const M = inMapel(materi, curMapel), T = inMapel(tugas, curMapel), K = inMapel(kuis, curMapel);
   $("#dNama").textContent = m.nama;
   $("#dGuru").innerHTML = guruRow(m);
+  $("#dProg").innerHTML = M.length ? progHead(M) : "";
   $("#dTabs").innerHTML = [["materi", "Materi & modul", M.length], ["tugas", "Tugas", T.length], ["kuis", "Kuis", K.length]]
     .map(([k, l, n]) => `<button type="button" data-d="${k}" class="${curTab === k ? "on" : ""}">${l} (${n})</button>`).join("");
   document.querySelectorAll("#dTabs button").forEach((b) => (b.onclick = () => { curTab = b.dataset.d; renderDetail(); }));
