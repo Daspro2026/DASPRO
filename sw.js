@@ -1,8 +1,8 @@
 // Service worker DASPRO: halaman & aset dimuat dari jaringan lebih dulu (selalu versi terbaru),
 // dan memakai salinan tersimpan bila HP sedang offline. Data Firebase tidak disimpan di sini.
-const V = "daspro-v3";
+const V = "daspro-v4";
 const SHELL = ["./", "start.html", "index.html", "login.html", "dashboard.html", "admin.html", "css/theme.css",
-  "js/common.js", "js/firebase.js", "js/poin.js", "js/reset.js", "js/sertifikat.js", "js/ekspor.js", "js/mock.js", "js/kalender.js", "js/progres.js",
+  "js/common.js", "js/firebase.js", "js/poin.js", "js/reset.js", "js/sertifikat.js", "js/ekspor.js", "js/mock.js", "js/kalender.js", "js/progres.js", "js/integritas.js",
   "icon-192.png", "icon-512.png", "icon-maskable-512.png", "apple-touch-icon.png", "favicon.ico", "manifest.webmanifest"];
 
 self.addEventListener("install", (e) => {
