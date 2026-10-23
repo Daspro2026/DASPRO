@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /dashboard.html
+Disallow: /admin.html
+Disallow: /start.html
+
+Sitemap: https://www.daspro.web.id/sitemap.xml
