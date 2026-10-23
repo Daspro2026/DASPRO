@@ -76,7 +76,7 @@ export function applySettings(s = {}) {
   if (/^#[0-9a-f]{6}$/i.test(s.warna || "")) {
     r.setProperty("--brand", s.warna);
     r.setProperty("--b2", `color-mix(in srgb, ${s.warna} 72%, #fff)`);
-    r.setProperty("--soft", `color-mix(in srgb, ${s.warna} 9%, #fff)`);
+    r.setProperty("--soft", `color-mix(in srgb, ${s.warna} 9%, var(--card))`);
   }
   document.querySelectorAll("[data-set]").forEach((e) => { const v = s[e.dataset.set]; if (v) e.innerHTML = esc(v).replace(/\n/g, "<br>"); });
   if (s.nama && document.title.includes("DASPRO")) document.title = document.title.replace("DASPRO", s.nama);
@@ -176,3 +176,23 @@ function pwaBanner() {
   main.querySelector("#pwaX").onclick = sembunyi;
   main.querySelector("#pwaOk").onclick = async () => { if (evPasang) { evPasang.prompt(); await evPasang.userChoice.catch(() => {}); evPasang = null; main.querySelector(".pwa")?.remove(); } else sembunyi(); };
 }
+
+// ---- Mode gelap / terang (mengikuti pengaturan HP, bisa diganti dengan tombol)
+(() => {
+  const r = document.documentElement, K = "daspro_tema";
+  const sys = () => matchMedia("(prefers-color-scheme: dark)").matches;
+  const cur = () => r.dataset.theme || (sys() ? "dark" : "light");
+  const MOON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z"/></svg>';
+  const SUN = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>';
+  const b = document.createElement("button");
+  b.type = "button"; b.className = "tema-btn";
+  const paint = () => {
+    const gelap = cur() === "dark";
+    b.innerHTML = gelap ? SUN : MOON;
+    b.title = b.ariaLabel = gelap ? "Ganti ke mode terang" : "Ganti ke mode gelap";
+    document.querySelectorAll('meta[name="theme-color"]').forEach(m => m.content = gelap ? "#0A0F1E" : "#0B63CE");
+  };
+  b.onclick = () => { const n = cur() === "dark" ? "light" : "dark"; r.dataset.theme = n; try { localStorage.setItem(K, n); } catch {} paint(); };
+  matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", paint);
+  document.body.append(b); paint();
+})();
