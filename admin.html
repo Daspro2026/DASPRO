@@ -120,7 +120,7 @@ dialog{border:0;border-radius:22px;max-width:580px;width:calc(100% - 32px);paddi
   <div id="kosong" class="card empty hide">Semua jawaban sudah diperiksa.</div>
   <div class="grid gp" id="panel">
     <div class="card"><div class="row"><div class="av" id="pAv"></div><div><h2 id="pSiswa"></h2><span class="mute sm" id="pTugas"></span></div></div>
-      <div class="ans pre" id="pJawab"></div><div id="pFiles"></div><a class="btn ghost sm hide" id="pLink" target="_blank" rel="noopener" style="margin-top:14px">Buka tautan file</a></div>
+      <div id="pIg"></div><div class="ans pre" id="pJawab"></div><div id="pFiles"></div><a class="btn ghost sm hide" id="pLink" target="_blank" rel="noopener" style="margin-top:14px">Buka tautan file</a></div>
     <form class="card" id="nilaiForm"><h2>Penilaian</h2>
       <label>Nilai (0-100)</label><input id="nilai" type="number" min="0" max="100" required>
       <div class="chips" id="cn"></div>
@@ -207,6 +207,12 @@ dialog{border:0;border-radius:22px;max-width:580px;width:calc(100% - 32px);paddi
   <div id="prSum"></div>
   <div class="grid g2" style="margin-top:18px;align-items:start"><div class="card"><h2>Per siswa</h2><p class="mute sm" style="margin:4px 0 0">Yang paling tertinggal tampil di atas.</p><ul class="list" id="prSiswa" style="margin-top:8px"></ul></div>
     <div class="card"><h2>Per materi</h2><p class="mute sm" style="margin:4px 0 0">Materi yang paling jarang diselesaikan tampil di atas.</p><ul class="list" id="prMateri" style="margin-top:8px"></ul></div></div></section>
+
+<section id="integritas" class="hide"><div class="ph"><div><h1>Integritas kuis</h1><p>Berapa kali siswa meninggalkan halaman kuis saat mengerjakan. Ini indikator untuk ditindaklanjuti, bukan bukti kecurangan.</p></div><button type="button" class="btn ghost sm" id="igMuat">Muat ulang</button></div>
+  <div class="card" style="margin-bottom:18px"><div class="grid g3"><div><label style="margin-top:0">Kuis</label><select id="igKuis"></select></div><div><label style="margin-top:0">Kelas</label><select id="igKelas"></select></div><div><label style="margin-top:0">Tampilkan</label><select id="igMin"><option value="0">Semua peserta</option><option value="1">Pindah tab 1x atau lebih</option><option value="3">Pindah tab 3x atau lebih</option><option value="6">Pindah tab 6x atau lebih</option></select></div></div>
+    <p class="mute sm" style="margin:10px 0 0">Angka dicatat dari browser siswa. Notifikasi atau panggilan masuk di HP bisa ikut terhitung, jadi cocokkan dengan waktu di luar halaman dan nilai sebelum menyimpulkan. Kuis yang dikerjakan sebelum fitur ini aktif tampil "Tidak tercatat".</p></div>
+  <div id="igSum"></div>
+  <div class="card" style="margin-top:18px"><ul class="list" id="igList"></ul></div></section>
 
 <section id="absensi" class="hide"><div class="ph"><div><h1>Absensi</h1><p>Catat kehadiran siswa per pertemuan, lalu lihat rekapnya per kelas.</p></div></div>
   <div class="sisbar"><select id="abKelas" style="width:auto;min-width:200px"></select>
@@ -303,10 +309,11 @@ import * as EX from "./js/ekspor.js";
 import * as GM from "./js/poin.js";
 import * as KAL from "./js/kalender.js";
 import * as PR from "./js/progres.js";
+import * as IG from "./js/integritas.js";
 import { guard, esc, $, ago, icon, toast, applySettings, safeUrl, fileChips, fdate } from "./js/common.js";
 
 const views = {};
-const { show, user: akun, profile: akunProfil } = await guard(true, [["ringkasan", "Ringkasan", "grid"], ["pengumuman", "Pengumuman", "clock"], ["mapel", "Mata pelajaran", "book"], ["kelas", "Kelas", "users"], ["siswa", "Siswa", "users"], ["daftar", "Pendaftaran", "key"], ["konten", "Materi & Tugas", "upload"], ["kuis", "Kuis", "edit"], ["sertif", "Sertifikat", "star"], ["kalender", "Kalender", "clock"], ["progres", "Progres materi", "book"], ["periksa", "Periksa", "check"], ["nilaiS", "Rekap nilai", "star"], ["analitik", "Analitik", "chart"], ["absensi", "Absensi", "check"], ["gamifikasi", "Gamifikasi", "star"], ["profilG", "Profil", "users"], ["setelan", "Pengaturan", "sliders"]], views);
+const { show, user: akun, profile: akunProfil } = await guard(true, [["ringkasan", "Ringkasan", "grid"], ["pengumuman", "Pengumuman", "clock"], ["mapel", "Mata pelajaran", "book"], ["kelas", "Kelas", "users"], ["siswa", "Siswa", "users"], ["daftar", "Pendaftaran", "key"], ["konten", "Materi & Tugas", "upload"], ["kuis", "Kuis", "edit"], ["sertif", "Sertifikat", "star"], ["kalender", "Kalender", "clock"], ["progres", "Progres materi", "book"], ["periksa", "Periksa", "check"], ["nilaiS", "Rekap nilai", "star"], ["analitik", "Analitik", "chart"], ["integritas", "Integritas kuis", "check"], ["absensi", "Absensi", "check"], ["gamifikasi", "Gamifikasi", "star"], ["profilG", "Profil", "users"], ["setelan", "Pengaturan", "sliders"]], views);
 const all = async (c) => (await getDocs(collection(db, c))).docs.map((d) => ({ id: d.id, ...d.data() }));
 const kosong = (t) => `<div class="empty">${t}</div>`;
 $("#keP").onclick = () => show("periksa");
@@ -555,7 +562,7 @@ function tampil() {
   $("#kosong").classList.toggle("hide", !!c); $("#panel").classList.toggle("hide", !c);
   $("#sisa").textContent = c ? `Sisa ${queue.length} jawaban untuk diperiksa` : "";
   if (!c) return;
-  $("#pAv").textContent = c.siswaNama[0]; $("#pSiswa").textContent = c.siswaNama; $("#pTugas").textContent = c.tugasJudul; $("#pJawab").textContent = ringkasKuis(c) || (typeof c.jawaban === "string" && c.jawaban ? c.jawaban : "(Siswa tidak menulis jawaban teks)"); $("#pFiles").innerHTML = fileChips(c.files);
+  $("#pAv").textContent = c.siswaNama[0]; $("#pSiswa").textContent = c.siswaNama; $("#pTugas").textContent = c.tugasJudul; $("#pIg").innerHTML = c.jenis === "kuis" ? IG.badgeHtml(c.integritas) : ""; $("#pJawab").textContent = ringkasKuis(c) || (typeof c.jawaban === "string" && c.jawaban ? c.jawaban : "(Siswa tidak menulis jawaban teks)"); $("#pFiles").innerHTML = fileChips(c.files);
   const l = $("#pLink"); l.classList.toggle("hide", !/^https?:\/\//i.test(c.link || "")); l.href = c.link || "#";
   $("#nilai").value = c.jenis === "kuis" && c.nilaiOtomatis != null ? c.nilaiOtomatis : ""; $("#fb").value = "";
 }
@@ -578,7 +585,7 @@ views.nilaiS = async () => {
   done = rekapCache.rows
     .map((x) => { const id = mOf(x.mapelId || src[x.tugasId] || ""); const kid = kOf(x.kelasId); return { ...x, _id: id, _m: mapelNama(id), _kid: kid, _kl: kid ? kelasNama(kid) : "Tanpa kelas" }; })
     .filter((x) => (f === "*" || x._id === f) && ($("#rKelas").value === "*" || x._kid === $("#rKelas").value) && ($("#rJenis").value === "*" || (x.jenis === "kuis") === ($("#rJenis").value === "kuis")));
-  $("#rekap").innerHTML = done.length ? `<p class="mute sm" style="margin-bottom:12px">${done.length} hasil · rata-rata nilai ${Math.round(done.reduce((a, x) => a + (Number(x.nilai) || 0), 0) / done.length)}</p><table><tr><th>Siswa</th><th>Kelas</th><th>Mapel</th><th>Tugas / kuis</th><th>Nilai</th><th>Umpan balik</th><th>Berkas</th></tr>${done.map((x) => `<tr><td><b>${esc(x.siswaNama)}</b></td><td>${esc(x._kl)}</td><td>${esc(x._m)}</td><td>${esc(x.tugasJudul)}</td><td><span class="tag ok">${esc(x.nilai)}</span></td><td class="mute">${esc(x.feedback || "-")}</td><td>${berkas(x)}</td></tr>`).join("")}</table>` : kosong("Belum ada nilai.");
+  $("#rekap").innerHTML = done.length ? `<p class="mute sm" style="margin-bottom:12px">${done.length} hasil · rata-rata nilai ${Math.round(done.reduce((a, x) => a + (Number(x.nilai) || 0), 0) / done.length)}</p><table><tr><th>Siswa</th><th>Kelas</th><th>Mapel</th><th>Tugas / kuis</th><th>Nilai</th><th>Umpan balik</th><th>Berkas</th></tr>${done.map((x) => `<tr><td><b>${esc(x.siswaNama)}</b></td><td>${esc(x._kl)}</td><td>${esc(x._m)}</td><td>${esc(x.tugasJudul)}${x.jenis === "kuis" ? IG.tagHtml(x.integritas) : ""}</td><td><span class="tag ok">${esc(x.nilai)}</span></td><td class="mute">${esc(x.feedback || "-")}</td><td>${berkas(x)}</td></tr>`).join("")}</table>` : kosong("Belum ada nilai.");
 };
 /* ===== Ekspor rekap nilai (Excel & CSV) ===== */
 const tglID = (t) => (t?.seconds ? new Date(t.seconds * 1000).toLocaleDateString("id-ID") : "");
@@ -596,8 +603,8 @@ async function dataEkspor() {
   const nilai = {}; done.forEach((x) => ((nilai[x.siswaId] ||= {})[x.tugasId] = Number(x.nilai)));
   const daftar = [...sis.entries()].map(([id, s]) => ({ id, ...s })).sort((p, q) => urut(p.kelas, q.kelas) || urut(p.nama, q.nama));
   const label = items.map((it, i) => (items.findIndex((o) => o.judul === it.judul) === i ? it.judul : `${it.judul} (${it.mapel})`));
-  const flat = [["No", "Nama siswa", "Kelas", "Mapel", "Tugas / kuis", "Jenis", "Nilai", "Umpan balik", "Tanggal kirim", "Berkas / tautan"],
-    ...done.map((x, i) => [i + 1, x.siswaNama, x._kl, x._m, x.tugasJudul, x.jenis === "kuis" ? "Kuis" : "Tugas", Number(x.nilai), x.feedback || "", tglID(x.createdAt), (x.files || []).map((f) => f.nama).concat(x.link ? [x.link] : []).join(" ")])];
+  const flat = [["No", "Nama siswa", "Kelas", "Mapel", "Tugas / kuis", "Jenis", "Nilai", "Umpan balik", "Tanggal kirim", "Berkas / tautan", "Pindah tab (kuis)", "Waktu di luar halaman (detik)"],
+    ...done.map((x, i) => [i + 1, x.siswaNama, x._kl, x._m, x.tugasJudul, x.jenis === "kuis" ? "Kuis" : "Tugas", Number(x.nilai), x.feedback || "", tglID(x.createdAt), (x.files || []).map((f) => f.nama).concat(x.link ? [x.link] : []).join(" "), x.integritas ? x.integritas.pindah : "", x.integritas ? x.integritas.detik : ""])];
   const matriks = [["No", "Nama siswa", "Kelas", ...label, "Jumlah dikerjakan", "Rata-rata"],
     ...daftar.map((s, i) => { const v = items.map((it) => nilai[s.id]?.[it.id]); const ada = v.filter((n) => Number.isFinite(n));
       return [i + 1, s.nama, s.kelas, ...v.map((n) => (Number.isFinite(n) ? n : "")), ada.length, ada.length ? bulat1(ada.reduce((p, n) => p + n, 0) / ada.length) : ""]; })];
@@ -1107,6 +1114,35 @@ views.progres = async () => {
   } catch (er) { return rulesHint(er); }
   $("#prKelas").onchange = $("#prMapel").onchange = prGambar;
   prGambar();
+};
+/* ===== Integritas kuis ===== */
+let igCache = null;
+function igGambar() {
+  if (!igCache) return;
+  const fq = $("#igKuis").value, fk = $("#igKelas").value, mn = Number($("#igMin").value) || 0;
+  const rows = igCache.rows.filter((x) => (fq === "*" || x.tugasId === fq) && (fk === "*" || kOf(x.kelasId) === fk));
+  const cat = rows.filter((x) => x.integritas), ada = cat.filter((x) => x.integritas.pindah > 0);
+  const maks = cat.reduce((m, x) => Math.max(m, x.integritas.pindah), 0);
+  $("#igSum").innerHTML = `<div class="kal-sum">${[["Peserta", rows.length, ""], ["Pernah pindah tab", ada.length + (cat.length ? " / " + cat.length : ""), ada.length ? "warn" : ""], ["Terbanyak", maks + "x", maks >= 6 ? "bad" : ""]].map(([l, n, c]) => `<div class="card kal-s ${c}"><b>${n}</b><span>${l}</span></div>`).join("")}</div>`;
+  const hasil = rows.filter((x) => mn === 0 || (x.integritas && x.integritas.pindah >= mn))
+    .sort((x, y) => (y.integritas ? y.integritas.pindah : -1) - (x.integritas ? x.integritas.pindah : -1) || (x.siswaNama || "").localeCompare(y.siswaNama || "", "id"));
+  $("#igList").innerHTML = hasil.map((x) => {
+    const g = x.integritas, l = IG.level(g), p = g ? g.pindah : 0, kid = kOf(x.kelasId);
+    const meta = g ? [p ? IG.fmt(g.detik) + " di luar halaman (terlama " + IG.fmt(g.maks) + ")" : "tidak meninggalkan halaman", g.lama ? "mengerjakan " + IG.fmt(g.lama) : "", g.tanpaLaporan ? "laporan tab tidak terkirim" : ""].filter(Boolean).join(" · ") : "Belum ada data pelacakan";
+    return `<li class="ig-row"><div class="row" style="flex:1;min-width:0;align-items:flex-start"><div class="av" style="overflow:hidden">${esc((x.siswaNama || "?")[0].toUpperCase())}</div><div class="ig-info"><b>${esc(x.siswaNama || "-")}</b><div class="mute sm">${esc(kid ? kelasNama(kid) : "Tanpa kelas")} · ${esc((x.tugasJudul || "").replace(/^Kuis:\s*/, ""))}</div><div class="mute sm ig-meta">${esc(meta)}</div></div></div><div class="ig-side"><span class="ig-b ${l.k}">${g ? (p ? p + "x pindah tab" : "Tidak pindah tab") : "Tidak tercatat"}</span><span class="mute sm">${x.status === "selesai" ? "Nilai " + esc(x.nilai) : "Menunggu diperiksa"}</span></div></li>`;
+  }).join("") || kosong("Tidak ada data untuk filter ini.");
+}
+views.integritas = async () => {
+  try {
+    await (kelasAll.length ? 0 : loadKelas());
+    if (!igCache || Date.now() - igCache.t > 18e4) igCache = { t: Date.now(), rows: (await getDocs(query(collection(db, "submissions"), where("jenis", "==", "kuis")))).docs.map((d) => ({ id: d.id, ...d.data() })) };
+  } catch (er) { return rulesHint(er); }
+  const kq = new Map(); igCache.rows.forEach((x) => kq.set(x.tugasId, (x.tugasJudul || "").replace(/^Kuis:\s*/, "")));
+  isiSel($("#igKuis"), opt("*", "Semua kuis") + [...kq].sort((p, q) => p[1].localeCompare(q[1], "id")).map(([id, j]) => opt(id, j)).join(""));
+  isiSel($("#igKelas"), opt("*", "Semua kelas") + kelasAll.map((k) => opt(k.id, k.nama)).join("") + opt("", "Tanpa kelas"));
+  $("#igKuis").onchange = $("#igKelas").onchange = $("#igMin").onchange = igGambar;
+  $("#igMuat").onclick = () => { igCache = null; views.integritas(); };
+  igGambar();
 };
 views.gamifikasi = async () => {
   await Promise.all([loadKelas(), gmMuatCfg()]);
