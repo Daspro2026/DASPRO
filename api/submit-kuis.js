@@ -17,6 +17,9 @@ const GRACE = 15000; // toleransi 15 detik setelah waktu habis
 const norm = (s) => String(s ?? "").trim().toLowerCase().replace(/\s+/g, " ");
 const acak = (a) => { a = [...a]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 const gagal = (http, msg) => Object.assign(new Error(msg), { http });
+// Laporan perpindahan tab dari browser siswa: hanya angka, dibatasi agar tidak bisa dipakai menulis data aneh.
+const bil = (v, max) => { v = Math.round(Number(v)); return Number.isFinite(v) ? Math.min(max, Math.max(0, v)) : 0; };
+const bersihIg = (g) => (g && typeof g === "object" ? { pindah: bil(g.pindah, 999), detik: bil(g.detik, 86400), maks: bil(g.maks, 86400) } : null);
 
 function susunReview(kuis, kn, detail) {
   return (kuis.soal || []).map((q) => {
@@ -29,7 +32,8 @@ function susunReview(kuis, kn, detail) {
   });
 }
 
-async function selesaikan(ctx, a, jawaban, telat) {
+// ig: objek laporan | null (siswa mengirim tanpa laporan) | false (ditutup otomatis oleh server, tidak ada laporan)
+async function selesaikan(ctx, a, jawaban, telat, ig) {
   const { kuisId, kuis, kn, st, sub, user } = ctx, kunci = kn.kunci || {};
   let total = 0, dapat = 0, benar = 0, otomatis = 0, adaEsai = false;
   const detail = {};
@@ -62,6 +66,12 @@ async function selesaikan(ctx, a, jawaban, telat) {
   } else if (!sub || sub.status !== "selesai" || nilaiOto > (Number(sub.nilai) || 0)) {
     hasil = { ...dasar, jawaban: jawabanMap, detail, benar, nilai: nilaiOto, feedback, status: "selesai", createdAt: sub?.createdAt || TS() };
   } else hasil = { ...sub, percobaan: n, updatedAt: TS() }; // percobaan ini lebih rendah: nilai terbaik tetap
+  // Integritas: akumulasi semua percobaan; "lama" dihitung server dari waktu mulai (tidak bisa dipalsukan siswa).
+  const prev = (sub && sub.integritas) || {}, lap = ig || { pindah: 0, detik: 0, maks: 0 };
+  hasil.integritas = {
+    pindah: (prev.pindah || 0) + lap.pindah, detik: (prev.detik || 0) + lap.detik, maks: Math.max(prev.maks || 0, lap.maks),
+    terakhir: lap.pindah, lama: a.mulai ? Math.round((Date.now() - a.mulai) / 1000) : 0, tanpaLaporan: (prev.tanpaLaporan || 0) + (ig === null ? 1 : 0)
+  };
   await db.doc(`submissions/${kuisId}_${user.uid}`).set(hasil);
   await db.doc(`percobaan/${kuisId}_${user.uid}`).delete().catch(() => {});
   const out = { status: hasil.status, nilai: adaEsai ? null : nilaiOto, terbaik: hasil.nilai, benar, total: otomatis, feedback, percobaan: n, maks, telat: !!telat, adaEsai };
@@ -75,7 +85,7 @@ async function mulai(ctx) {
   if (kuis.tutup && now > kuis.tutup) throw gagal(403, "Kuis sudah ditutup.");
   const ref = db.doc(`percobaan/${kuisId}_${user.uid}`), snap = await ref.get();
   let a = snap.exists ? snap.data() : null;
-  if (a && a.batas && now > a.batas + GRACE) { ctx.sub = (await selesaikan(ctx, a, {}, true)).sub; a = null; } // waktu lama habis: dihitung kosong
+  if (a && a.batas && now > a.batas + GRACE) { ctx.sub = (await selesaikan(ctx, a, {}, true, false)).sub; a = null; } // waktu lama habis: dihitung kosong
   const pakai = ctx.sub?.percobaan || 0;
   if (!a && pakai >= maks) throw gagal(403, "Kesempatan mengerjakan sudah habis.");
   if (!a) {
@@ -94,11 +104,11 @@ async function mulai(ctx) {
   return { soal, sisaMs: a.batas ? Math.max(0, a.batas - now) : 0, n: a.n, maks, durasi: kuis.durasi || 0 };
 }
 
-async function kirim(ctx, jawaban) {
+async function kirim(ctx, jawaban, ig) {
   const snap = await db.doc(`percobaan/${ctx.kuisId}_${ctx.user.uid}`).get();
   if (!snap.exists) throw gagal(409, "Tidak ada kuis yang sedang dikerjakan. Mulai kuis lebih dulu.");
   const a = snap.data(), telat = !!(a.batas && Date.now() > a.batas + GRACE);
-  return (await selesaikan(ctx, a, telat ? {} : (jawaban && typeof jawaban === "object" ? jawaban : {}), telat)).out;
+  return (await selesaikan(ctx, a, telat ? {} : (jawaban && typeof jawaban === "object" ? jawaban : {}), telat, ig)).out;
 }
 
 async function pembahasan(ctx) {
@@ -125,7 +135,7 @@ module.exports = async (req, res) => {
     if ((st.status || "aktif") !== "aktif") throw gagal(403, "Akun Anda belum aktif.");
     const ctx = { kuisId, kuis: kuisSnap.data(), kn: kunciSnap.data(), st, sub: subSnap.exists ? subSnap.data() : null, user };
     if (aksi === "mulai") return res.status(200).json(await mulai(ctx));
-    if (aksi === "kirim") return res.status(200).json(await kirim(ctx, body.jawaban));
+    if (aksi === "kirim") return res.status(200).json(await kirim(ctx, body.jawaban, bersihIg(body.ig)));
     if (aksi === "pembahasan") return res.status(200).json(await pembahasan(ctx));
     throw gagal(400, "Aksi tidak dikenal");
   } catch (e) {
