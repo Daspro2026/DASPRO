@@ -137,20 +137,20 @@ dialog{border:0;border-radius:22px;max-width:580px;width:calc(100% - 32px);paddi
     <form class="card" id="kForm"><h2 id="kHead">Buat kuis baru</h2><div id="kEditInfo" class="mute sm hide" style="margin-bottom:6px"></div><label>Mata pelajaran</label><select id="kMapel"></select>
       <label>Judul kuis</label><input id="kJudul" required placeholder="Contoh: Kuis Algoritma Bab 1">
       <label>Deskripsi (opsional)</label><input id="kDesk">
-      <div class="grid" style="grid-template-columns:1fr 1fr;gap:12px;margin-top:4px">
+      <div class="kgrid">
         <div><label>Batas waktu (menit, 0 = tanpa batas)</label><input id="kDurasi" type="number" min="0" value="0"></div>
         <div><label>Maks. percobaan</label><input id="kMaks" type="number" min="1" value="1"></div>
         <div><label>Dibuka (opsional)</label><input id="kBuka" type="datetime-local"></div>
         <div><label>Ditutup (opsional)</label><input id="kTutup" type="datetime-local"></div>
       </div>
-      <label style="display:flex;gap:8px;align-items:center;color:var(--ink)"><input type="checkbox" id="kAcak" style="width:auto"> Acak urutan soal</label>
-      <label style="display:flex;gap:8px;align-items:center;color:var(--ink);margin-top:8px"><input type="checkbox" id="kAcakOpsi" style="width:auto"> Acak urutan pilihan jawaban</label>
+      <label class="kchk"><input type="checkbox" id="kAcak"> Acak urutan soal</label>
+      <label class="kchk"><input type="checkbox" id="kAcakOpsi"> Acak urutan pilihan jawaban</label>
       <label>Pembahasan untuk siswa</label><select id="kBhs"><option value="tidak">Tidak ditampilkan</option><option value="selesai">Langsung setelah selesai</option><option value="tutup">Setelah kuis ditutup</option></select>
       <div id="soalBox"></div>
       <button type="button" class="btn ghost full" id="tambahSoal">+ Tambah soal</button>
       <label>Sertifikat (opsional)</label>
-      <div class="grid g2" style="gap:12px"><div><select id="kSert"></select></div><div><input id="kSertMin" type="number" min="0" max="100" value="0" title="Nilai minimal"></div></div>
-      <p class="mute sm" style="margin-top:6px">Kolom kanan = nilai minimal (0 = cukup sudah dinilai). Template dikelola di menu Sertifikat.</p>
+      <div class="ksert"><div><label>Template</label><select id="kSert"></select></div><div><label>Nilai minimal</label><input id="kSertMin" type="number" min="0" max="100" value="0" title="Nilai minimal"></div></div>
+      <p class="mute sm" style="margin-top:8px">Nilai minimal 0 = cukup sudah dinilai. Template dikelola di menu Sertifikat.</p>
       <button class="btn full" id="kSimpan">Simpan kuis</button>
       <button type="button" class="btn ghost full hide" id="kBatal" style="margin-top:8px">Batal edit</button></form>
     <div class="card"><h2>Kuis Anda</h2><ul class="list" id="kDaftar" style="margin-top:8px"></ul></div>
@@ -630,12 +630,12 @@ const msDari = (v) => (v ? new Date(v).getTime() : 0);
 const dtLokal = (ms) => (ms ? new Date(ms - new Date(ms).getTimezoneOffset() * 60000).toISOString().slice(0, 16) : "");
 let soalList = [];
 function renderSoal() {
-  $("#soalBox").innerHTML = soalList.map((q, i) => `<div class="card" style="margin-top:14px;background:var(--bg);padding:18px">
-    <div class="row" style="justify-content:space-between;flex-wrap:wrap"><b>Soal ${i + 1}</b><div class="row" style="gap:8px">
-      <select data-f="tipe" data-i="${i}" style="width:auto"><option value="pg" ${q.tipe === "pg" ? "selected" : ""}>Pilihan ganda</option><option value="isian" ${q.tipe === "isian" ? "selected" : ""}>Isian singkat</option><option value="esai" ${q.tipe === "esai" ? "selected" : ""}>Esai (dinilai guru)</option></select>
-      <button type="button" class="btn ghost sm" data-del="${i}">Hapus</button></div></div>
+  $("#soalBox").innerHTML = soalList.map((q, i) => `<div class="card qcard">
+    <div class="qhead"><b>Soal ${i + 1}</b>
+      <select class="qtipe" data-f="tipe" data-i="${i}"><option value="pg" ${q.tipe === "pg" ? "selected" : ""}>Pilihan ganda</option><option value="isian" ${q.tipe === "isian" ? "selected" : ""}>Isian singkat</option><option value="esai" ${q.tipe === "esai" ? "selected" : ""}>Esai (dinilai guru)</option></select>
+      <button type="button" class="btn ghost sm qdel" data-del="${i}" aria-label="Hapus soal ${i + 1}">${icon("trash")} Hapus</button></div>
     <label>Pertanyaan</label><textarea data-f="teks" data-i="${i}" style="min-height:70px">${esc(q.teks)}</textarea>
-    ${q.tipe === "pg" ? `<label>Pilihan jawaban (klik bulatan di samping jawaban yang benar)</label>${q.opsi.map((o, j) => `<div class="row" style="margin-bottom:8px"><input class="qrad" type="radio" name="b${i}" data-i="${i}" data-j="${j}" ${q.benar === j ? "checked" : ""}><b>${HURUF[j]}</b><input data-o="1" data-i="${i}" data-j="${j}" value="${esc(o)}" placeholder="Pilihan ${HURUF[j]}"></div>`).join("")}`
+    ${q.tipe === "pg" ? `<label>Pilihan jawaban (klik bulatan di samping jawaban yang benar)</label>${q.opsi.map((o, j) => `<div class="qopt"><input class="qrad" type="radio" name="b${i}" data-i="${i}" data-j="${j}" ${q.benar === j ? "checked" : ""}><b>${HURUF[j]}</b><input data-o="1" data-i="${i}" data-j="${j}" value="${esc(o)}" placeholder="Pilihan ${HURUF[j]}"></div>`).join("")}`
       : q.tipe === "isian" ? `<label>Jawaban yang diterima (satu per baris; huruf besar/kecil diabaikan)</label><textarea data-f="isian" data-i="${i}" style="min-height:60px">${esc(q.isian)}</textarea>`
       : '<p class="mute sm" style="margin-top:10px">Soal esai tidak dinilai otomatis. Anda memberi nilai akhir di menu Periksa.</p>'}
     <label>Pembahasan (opsional)</label><textarea data-f="pembahasan" data-i="${i}" style="min-height:56px">${esc(q.pembahasan)}</textarea>
@@ -685,9 +685,9 @@ views.kuis = async () => {
   await loadMapel();
   if (!soalList.length) { soalList = [baru()]; renderSoal(); }
   const ks = (await getDocs(query(collection(db, "kuis"), orderBy("createdAt", "desc")))).docs.map((d) => ({ id: d.id, ...d.data() }));
-  $("#kDaftar").innerHTML = ks.map((k) => `<li><div class="row"><div class="fi">${icon("edit")}</div><div><b>${esc(k.judul)}</b><div class="mute sm">${(k.soal || []).length} soal · ${esc(mapelNama(k.mapelId))} · ${k.durasi ? k.durasi + " menit" : "tanpa batas waktu"} · ${k.maks || 1}x percobaan${k.buka || k.tutup ? " · berjadwal" : ""}</div></div></div>
-    <div class="row" style="gap:6px"><button class="btn ghost sm" data-edit="${k.id}" title="Edit kuis">${icon("edit")} Edit</button>
-    <button class="btn ghost sm" data-id="${k.id}" style="color:var(--bad)">${icon("trash")}</button></div></li>`).join("") || kosong("Belum ada kuis.");
+  $("#kDaftar").innerHTML = ks.map((k) => `<li class="kitem"><div class="row kinfo"><div class="fi">${icon("edit")}</div><div class="kmeta"><b>${esc(k.judul)}</b><div class="mute sm">${(k.soal || []).length} soal · ${esc(mapelNama(k.mapelId))} · ${k.durasi ? k.durasi + " menit" : "tanpa batas waktu"} · ${k.maks || 1}x percobaan${k.buka || k.tutup ? " · berjadwal" : ""}</div></div></div>
+    <div class="kact"><button class="btn ghost sm" data-edit="${k.id}" title="Edit kuis">${icon("edit")} Edit</button>
+    <button class="btn ghost sm kdel" data-id="${k.id}" title="Hapus kuis" aria-label="Hapus kuis" style="color:var(--bad)">${icon("trash")}</button></div></li>`).join("") || kosong("Belum ada kuis.");
   document.querySelectorAll("#kDaftar [data-edit]").forEach((b) => (b.onclick = () => mulaiEdit(ks.find((k) => k.id === b.dataset.edit))));
   document.querySelectorAll("#kDaftar [data-id]").forEach((b) => (b.onclick = async () => {
     if (!await konfirmasi("Hapus kuis ini beserta kunci jawabannya? Nilai siswa yang sudah masuk tetap tersimpan.")) return;
