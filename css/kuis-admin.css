@@ -1,0 +1,57 @@
+/* =====================================================================
+   KUIS (dashboard guru) — form pembuat soal & daftar kuis
+   Dasar (desktop) + perapian untuk HP. Ditaruh paling bawah.
+   ===================================================================== */
+.kgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 12px;margin-top:4px}
+.kgrid>div{min-width:0}
+.kchk{display:flex;gap:10px;align-items:center;color:var(--ink);cursor:pointer;margin:10px 0 0}
+.kchk input{width:auto;flex:none;margin:0;accent-color:var(--brand)}
+.ksert{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 12px}
+.ksert>div{min-width:0}.ksert label{margin-top:0}
+.qcard{margin-top:14px;background:var(--bg);padding:18px}
+.qhead{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.qhead .qtipe{width:auto}
+.qhead .qdel{color:var(--bad)}
+.qopt{display:flex;align-items:center;gap:10px;margin-bottom:8px;padding:4px 8px;border:1px solid transparent;border-radius:12px}
+.qopt>b{width:1.2em;text-align:center;flex:none}
+.qopt input:not(.qrad){flex:1;min-width:0}
+.qopt:has(.qrad:checked){border-color:var(--ok);background:var(--okbg)}
+.kitem .kinfo{flex:1;min-width:0}
+.kitem .kmeta{min-width:0;overflow-wrap:anywhere}
+.kact{display:flex;gap:6px;flex:none}
+
+@media(max-width:860px){
+  #kForm,#kDaftar{min-width:0}
+  #kForm>h2{font-size:1.1rem}
+
+  /* Jadwal & batas: satu kolom, kolom tanggal tidak lagi keluar dari kartu */
+  .kgrid{grid-template-columns:minmax(0,1fr);gap:0;margin-top:0}
+  .kgrid label{margin:14px 0 6px}
+  #kForm input[type=datetime-local]{display:block;width:100%;min-width:0;max-width:100%;-webkit-appearance:none;appearance:none;text-align:left;line-height:1.2}
+  #kForm input[type=datetime-local]::-webkit-date-and-time-value{text-align:left;min-height:1.2em}
+
+  /* Opsi acak: baris yang mudah disentuh */
+  .kchk{min-height:48px;padding:10px 14px;border:1px solid var(--line);border-radius:12px;background:var(--card);font-size:.9rem;margin-top:10px}
+  .kchk input{width:22px;height:22px}
+
+  /* Sertifikat: template di atas, nilai minimal di bawah */
+  .ksert{grid-template-columns:minmax(0,1fr);gap:0}
+  .ksert>div+div label{margin-top:14px}
+
+  /* Kartu soal */
+  .card.qcard{padding:14px;border-radius:14px;margin-top:12px}
+  .qhead{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center}
+  .qhead b{font-size:1rem}
+  .qhead .qdel{grid-column:2;grid-row:1;min-height:40px;padding:6px 12px}
+  .qhead .qtipe{grid-column:1/-1;grid-row:2;width:100%}
+  .qopt{gap:8px;padding:4px 6px}
+  .qopt .qrad{width:24px!important;height:24px!important;flex:none}
+  .qopt>b{width:1.1em}
+  .qcard input[type=number]{max-width:none!important}
+
+  /* Daftar kuis: info di atas, tombol Edit & Hapus selebar kartu */
+  .list li.kitem{flex-direction:column;align-items:stretch;flex-wrap:nowrap;gap:12px;padding:14px 0}
+  .kitem .kact{display:grid;grid-template-columns:minmax(0,1fr) 46px;gap:8px}
+  .kitem .kact .btn{width:100%;min-height:44px}
+  .kitem .kact .kdel{padding:0}
+}
