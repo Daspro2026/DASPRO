@@ -58,3 +58,4 @@ module.exports = async (req, res) => {
     const auth = !e.http && /id-token|auth\/|token/i.test(e.code || e.message || "");
     return res.status(e.http || (auth ? 401 : 500)).json({ error: e.http ? e.message : auth ? "Sesi login tidak valid. Silakan masuk ulang." : "Terjadi kesalahan di server." });
   }
+};
