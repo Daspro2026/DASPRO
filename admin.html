@@ -624,8 +624,8 @@ async function jalankanEkspor(btn, fn) {
 $("#rXls").onclick = (e) => jalankanEkspor(e.currentTarget, (d) => EX.unduhExcel([{ nama: "Rekap nilai", rows: d.flat }, { nama: "Nilai per siswa", rows: d.matriks }, { nama: "Ringkasan per tugas", rows: d.ringkas }], d.nama + ".xlsx"));
 $("#csv").onclick = (e) => jalankanEkspor(e.currentTarget, (d) => EX.unduhCsv(d.flat, d.nama + ".csv"));
 /* Kuis */
-const HURUF = "ABCD";
-const baru = () => ({ tipe: "pg", teks: "", opsi: ["", "", "", ""], benar: null, isian: "", pembahasan: "", bobot: 1 });
+const HURUF = "ABCDE";
+const baru = () => ({ tipe: "pg", teks: "", opsi: ["", "", "", "", ""], benar: null, isian: "", pembahasan: "", bobot: 1 });
 const msDari = (v) => (v ? new Date(v).getTime() : 0);
 const dtLokal = (ms) => (ms ? new Date(ms - new Date(ms).getTimezoneOffset() * 60000).toISOString().slice(0, 16) : "");
 let soalList = [];
@@ -670,7 +670,7 @@ async function mulaiEdit(k) {
   $("#kAcak").checked = !!k.acak; $("#kAcakOpsi").checked = !!k.acakOpsi; $("#kBhs").value = k.pembahasan || "tidak";
   soalList = (k.soal || []).map((q) => {
     const tipe = q.tipe || "pg", kk = kunci[q.id];
-    return { tipe, teks: q.teks || "", opsi: [0, 1, 2, 3].map((j) => q.opsi?.[j] || ""), benar: tipe === "pg" && Number.isInteger(kk) ? kk : null, isian: tipe === "isian" && Array.isArray(kk) ? kk.join("\n") : "", pembahasan: bhs[q.id] || "", bobot: Number(q.bobot) || 1 };
+    return { tipe, teks: q.teks || "", opsi: [0, 1, 2, 3, 4].map((j) => q.opsi?.[j] || ""), benar: tipe === "pg" && Number.isInteger(kk) ? kk : null, isian: tipe === "isian" && Array.isArray(kk) ? kk.join("\n") : "", pembahasan: bhs[q.id] || "", bobot: Number(q.bobot) || 1 };
   });
   if (!soalList.length) soalList = [baru()];
   renderSoal();
@@ -702,7 +702,7 @@ $("#kForm").onsubmit = async (e) => {
     if (!q.teks.trim()) return alert(no + "isi pertanyaan.");
     if (q.pembahasan.trim()) bhs[id] = q.pembahasan.trim();
     if (q.tipe === "pg") {
-      const idx = [0, 1, 2, 3].filter((j) => q.opsi[j].trim());
+      const idx = [0, 1, 2, 3, 4].filter((j) => q.opsi[j].trim());
       if (idx.length < 2) return alert(no + "isi minimal 2 pilihan jawaban.");
       if (q.benar === null || !idx.includes(q.benar)) return alert(no + "tandai jawaban yang benar (bulatan di samping pilihan).");
       soal.push({ id, tipe: "pg", teks: q.teks.trim(), opsi: idx.map((j) => q.opsi[j].trim()), bobot: q.bobot || 1 });
