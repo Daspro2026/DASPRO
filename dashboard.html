@@ -470,7 +470,7 @@ async function mulaiKuis(k) {
       <form id="kf">${r.soal.map((q, i) => `<div style="margin-top:20px"><b>${i + 1}. ${esc(q.teks)}</b>${
         q.tipe === "isian" ? `<input name="q${i}" placeholder="Ketik jawaban singkat" autocomplete="off" style="margin-top:8px">`
         : q.tipe === "esai" ? `<textarea name="q${i}" placeholder="Tulis jawaban Anda" style="margin-top:8px"></textarea>`
-        : q.opsi.map((o, j) => `<label class="opt"><input type="radio" name="q${i}" value="${j}"><span>${"ABCD"[j]}. ${esc(o)}</span></label>`).join("")}</div>`).join("")}
+        : q.opsi.map((o, j) => `<label class="opt"><input type="radio" name="q${i}" value="${j}"><span>${"ABCDE"[j]}. ${esc(o)}</span></label>`).join("")}</div>`).join("")}
       <button class="btn full">Kirim jawaban</button></form>`;
     const kirim = async (otomatis) => {
       if (terkirim) return;
