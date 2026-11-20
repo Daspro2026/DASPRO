@@ -45,7 +45,9 @@ textarea{min-height:120px;resize:vertical}
 .mat{display:flex;flex-direction:column;gap:12px;transition:.15s}.mat:hover{border-color:var(--b2);transform:translateY(-2px)}
 .mat p{flex:1}
 .tag{display:inline-block;font-size:.74rem;font-weight:700;padding:3px 10px;border-radius:99px;background:var(--soft);color:var(--brand);white-space:nowrap}
-.tag.ok{background:var(--okbg);color:var(--ok)}.tag.warn{background:var(--warnbg);color:var(--warn)}
+.tag.ok{background:var(--okbg);color:var(--ok)}.tag.warn{background:var(--warnbg);color:var(--warn)}.tag.bad{background:#FDE8E8;color:#B42318}
+.kkm-ed{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px}.kkm-ed input{width:84px;padding:6px 10px;margin:0}.kkm-ed .btn{padding:6px 12px}
+.kkm-info{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px;font-size:.85rem;color:var(--mute)}
 .empty{padding:30px;text-align:center;color:var(--mute)}
 table{width:100%;border-collapse:collapse;font-size:.9rem}th{text-align:left;color:var(--mute);font-size:.8rem;padding:10px 12px;border-bottom:1px solid var(--line)}td{padding:14px 12px;border-bottom:1px solid var(--line)}
 .score{font-size:2.4rem;font-weight:800;color:var(--brand);line-height:1}
@@ -74,6 +76,8 @@ dialog{border:0;border-radius:22px;max-width:580px;width:calc(100% - 32px);paddi
     <form class="card" id="mForm"><h2>Tambah mata pelajaran</h2>
       <label>Nama mata pelajaran</label><input id="mNama" required placeholder="Contoh: Informatika">
       <label>Guru pengampu</label><input id="mGuru" required placeholder="Nama guru yang mengajar">
+      <label>KKM (nilai ketuntasan minimal)</label><input id="mKkm" type="number" min="0" max="100" step="1" value="75" required>
+      <p class="mute sm" style="margin-top:6px">Nilai 0-100. Siswa dengan nilai di bawah KKM ditandai "Belum tuntas". Bisa diubah kapan saja di daftar sebelah kanan, karena KKM tiap mata pelajaran dan tingkatan bisa berbeda (misalnya buat mapel "Informatika X" dan "Informatika XI" dengan KKM masing-masing).</p>
       <button class="btn full">Tambah</button></form>
     <div class="card"><h2>Daftar mata pelajaran</h2><ul class="list" id="mDaftar" style="margin-top:8px"></ul></div>
   </div></section>
@@ -123,6 +127,7 @@ dialog{border:0;border-radius:22px;max-width:580px;width:calc(100% - 32px);paddi
       <div id="pIg"></div><div class="ans pre" id="pJawab"></div><div id="pFiles"></div><a class="btn ghost sm hide" id="pLink" target="_blank" rel="noopener" style="margin-top:14px">Buka tautan file</a></div>
     <form class="card" id="nilaiForm"><h2>Penilaian</h2>
       <label>Nilai (0-100)</label><input id="nilai" type="number" min="0" max="100" required>
+      <div class="kkm-info" id="kkmInfo"></div>
       <div class="chips" id="cn"></div>
       <label>Umpan balik</label><textarea id="fb" style="min-height:90px"></textarea><div class="chips" id="chips"></div>
       <button class="btn full">Simpan &amp; berikutnya</button><button type="button" class="btn ghost full" id="lewat" style="margin-top:8px">Lewati</button></form>
@@ -310,6 +315,7 @@ import * as GM from "./js/poin.js";
 import * as KAL from "./js/kalender.js";
 import * as PR from "./js/progres.js";
 import * as IG from "./js/integritas.js";
+import { KKM_BAWAAN, kkmValid, kkmAda, kkmMapel, tuntas, labelTuntas } from "./js/kkm.js";
 import { guard, esc, $, ago, icon, toast, applySettings, safeUrl, fileChips, fdate } from "./js/common.js";
 
 const views = {};
@@ -414,7 +420,8 @@ views.mapel = async () => {
   const [m, t, k] = await Promise.all(["materi", "tugas", "kuis"].map(all));
   $("#mDaftar").innerHTML = mapelAll.map((x) => {
     const n = [m, t, k].map((a) => a.filter((i) => mOf(i.mapelId) === x.id).length);
-    return `<li><div class="row"><div class="fi">${icon("book")}</div><div><b>${esc(x.nama)}</b><div class="mute sm">Guru: ${x.guru ? esc(x.guru) : '<span style="color:var(--warn)">belum diisi</span>'}</div><div class="mute sm">${n[0]} materi · ${n[1]} tugas · ${n[2]} kuis</div></div></div>
+    return `<li><div class="row"><div class="fi">${icon("book")}</div><div><b>${esc(x.nama)}</b><div class="mute sm">Guru: ${x.guru ? esc(x.guru) : '<span style="color:var(--warn)">belum diisi</span>'}</div><div class="mute sm">${n[0]} materi · ${n[1]} tugas · ${n[2]} kuis</div>
+        <div class="kkm-ed"><span class="tag ${kkmAda(x) ? "ok" : "warn"}">KKM ${kkmMapel(x)}</span><input type="number" min="0" max="100" step="1" value="${kkmMapel(x)}" data-ki="${x.id}" aria-label="KKM ${esc(x.nama)}"><button class="btn ghost sm" data-kk="${x.id}">Simpan KKM</button>${kkmAda(x) ? "" : '<span class="mute sm">belum diatur (memakai ' + KKM_BAWAAN + ')</span>'}</div></div></div>
       <div style="display:flex;gap:6px"><button class="btn ghost sm" data-r="${x.id}" title="Ubah nama / guru">${icon("edit")}</button><button class="btn ghost sm" data-x="${x.id}" title="Hapus" style="color:var(--bad)">${icon("trash")}</button></div></li>`;
   }).join("") || kosong("Belum ada mata pelajaran. Tambahkan yang pertama.");
   document.querySelectorAll("#mDaftar [data-r]").forEach((b) => (b.onclick = async () => {
@@ -425,6 +432,13 @@ views.mapel = async () => {
     if (g === null) return;
     await updateDoc(doc(db, "mapel", b.dataset.r), { nama: n.trim(), guru: g.trim() }); await bump(); toast("Mata pelajaran diperbarui"); views.mapel();
   }));
+  document.querySelectorAll("#mDaftar [data-kk]").forEach((b) => (b.onclick = async () => {
+    const inp = document.querySelector(`#mDaftar [data-ki="${b.dataset.kk}"]`), k = kkmValid(inp.value);
+    if (k === null) { toast("KKM harus angka 0 sampai 100"); inp.focus(); return; }
+    b.disabled = true;
+    try { await updateDoc(doc(db, "mapel", b.dataset.kk), { kkm: k }); await bump(); toast("KKM diperbarui"); rekapCache = null; views.mapel(); }
+    catch (er) { alert("Gagal menyimpan KKM: " + er.message); b.disabled = false; }
+  }));
   document.querySelectorAll("#mDaftar [data-x]").forEach((b) => (b.onclick = async () => {
     if (!await konfirmasi("Hapus mata pelajaran ini? Materi, tugas, dan kuis di dalamnya tidak dihapus, tetapi dipindahkan ke 'Umum'.")) return;
     await deleteDoc(doc(db, "mapel", b.dataset.x)); await bump(); toast("Dihapus"); views.mapel();
@@ -433,7 +447,9 @@ views.mapel = async () => {
 $("#mForm").onsubmit = async (e) => {
   e.preventDefault();
   const id = "m" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
-  try { await setDoc(doc(db, "mapel", id), { nama: $("#mNama").value.trim(), guru: $("#mGuru").value.trim(), createdAt: serverTimestamp() }); await bump(); e.target.reset(); $("#mGuru").value = akunProfil?.nama || ""; toast("Mata pelajaran ditambahkan"); views.mapel(); }
+  const kkm = kkmValid($("#mKkm").value);
+  if (kkm === null) { toast("KKM harus angka 0 sampai 100"); return; }
+  try { await setDoc(doc(db, "mapel", id), { nama: $("#mNama").value.trim(), guru: $("#mGuru").value.trim(), kkm, createdAt: serverTimestamp() }); await bump(); e.target.reset(); $("#mGuru").value = akunProfil?.nama || ""; $("#mKkm").value = KKM_BAWAAN; toast("Mata pelajaran ditambahkan"); views.mapel(); }
   catch (er) { alert("Gagal menyimpan: " + er.message + "\nPastikan firestore.rules terbaru sudah di-Publish."); }
 };
 $("#mGuru").value = akunProfil?.nama || "";
@@ -552,9 +568,18 @@ const FB = ["Bagus sekali.", "Sudah baik, lengkapi analisisnya.", "Perlu diperba
 $("#chips").innerHTML = FB.map((t) => `<button type="button">${t}</button>`).join("");
 $("#cn").innerHTML = [60, 70, 80, 90, 100].map((n) => `<button type="button">${n}</button>`).join("");
 document.querySelectorAll("#chips button").forEach((b) => (b.onclick = () => { const f = $("#fb"); f.value = (f.value ? f.value + " " : "") + b.textContent; }));
-document.querySelectorAll("#cn button").forEach((b) => (b.onclick = () => ($("#nilai").value = b.textContent)));
+document.querySelectorAll("#cn button").forEach((b) => (b.onclick = () => { $("#nilai").value = b.textContent; infoKkm(); }));
+/* KKM pada form penilaian: mapel diambil dari jawaban, atau dari tugas/kuis asalnya untuk data lama */
+let srcMapelCache = null, kkmAktif = KKM_BAWAAN, kkmNama = "Umum";
+const srcMapel = async () => srcMapelCache ||= Object.fromEntries((await Promise.all([all("tugas"), all("kuis")])).flat().map((x) => [x.id, x.mapelId || ""]));
+function infoKkm() {
+  const v = $("#nilai").value, ada = v !== "";
+  $("#kkmInfo").innerHTML = `<span>KKM ${esc(kkmNama)}: <b>${kkmAktif}</b></span>${ada ? `<span class="tag ${tuntas(v, kkmAktif) ? "ok" : "bad"}">${labelTuntas(v, kkmAktif)}</span>` : ""}`;
+}
+$("#nilai").addEventListener("input", infoKkm);
 views.periksa = async () => {
-  queue = (await pending()).sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0));
+  await loadMapel(); const sm = await srcMapel();
+  queue = (await pending()).map((x) => ({ ...x, _mid: mOf(x.mapelId || sm[x.tugasId] || "") })).sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0));
   idx = 0; tampil();
 };
 function tampil() {
@@ -565,6 +590,7 @@ function tampil() {
   $("#pAv").textContent = c.siswaNama[0]; $("#pSiswa").textContent = c.siswaNama; $("#pTugas").textContent = c.tugasJudul; $("#pIg").innerHTML = c.jenis === "kuis" ? IG.badgeHtml(c.integritas) : ""; $("#pJawab").textContent = ringkasKuis(c) || (typeof c.jawaban === "string" && c.jawaban ? c.jawaban : "(Siswa tidak menulis jawaban teks)"); $("#pFiles").innerHTML = fileChips(c.files);
   const l = $("#pLink"); l.classList.toggle("hide", !/^https?:\/\//i.test(c.link || "")); l.href = c.link || "#";
   $("#nilai").value = c.jenis === "kuis" && c.nilaiOtomatis != null ? c.nilaiOtomatis : ""; $("#fb").value = "";
+  kkmAktif = kkmMapel(mapelAll.find((m) => m.id === c._mid)); kkmNama = mapelNama(c._mid); infoKkm();
 }
 $("#nilaiForm").onsubmit = async (e) => {
   e.preventDefault(); const c = queue[idx];
@@ -583,9 +609,9 @@ views.nilaiS = async () => {
   const f = $("#rMapel").value;
   if (!rekapCache || Date.now() - rekapCache.t > 3e5) rekapCache = { t: Date.now(), rows: (await getDocs(query(collection(db, "submissions"), where("status", "==", "selesai")))).docs.map((d) => ({ id: d.id, ...d.data() })) };
   done = rekapCache.rows
-    .map((x) => { const id = mOf(x.mapelId || src[x.tugasId] || ""); const kid = kOf(x.kelasId); return { ...x, _id: id, _m: mapelNama(id), _kid: kid, _kl: kid ? kelasNama(kid) : "Tanpa kelas" }; })
+    .map((x) => { const id = mOf(x.mapelId || src[x.tugasId] || ""); const kid = kOf(x.kelasId); return { ...x, _id: id, _m: mapelNama(id), _kkm: kkmMapel(mapelAll.find((m) => m.id === id)), _kid: kid, _kl: kid ? kelasNama(kid) : "Tanpa kelas" }; })
     .filter((x) => (f === "*" || x._id === f) && ($("#rKelas").value === "*" || x._kid === $("#rKelas").value) && ($("#rJenis").value === "*" || (x.jenis === "kuis") === ($("#rJenis").value === "kuis")));
-  $("#rekap").innerHTML = done.length ? `<p class="mute sm" style="margin-bottom:12px">${done.length} hasil · rata-rata nilai ${Math.round(done.reduce((a, x) => a + (Number(x.nilai) || 0), 0) / done.length)}</p><table><tr><th>Siswa</th><th>Kelas</th><th>Mapel</th><th>Tugas / kuis</th><th>Nilai</th><th>Umpan balik</th><th>Berkas</th></tr>${done.map((x) => `<tr><td><b>${esc(x.siswaNama)}</b></td><td>${esc(x._kl)}</td><td>${esc(x._m)}</td><td>${esc(x.tugasJudul)}${x.jenis === "kuis" ? IG.tagHtml(x.integritas) : ""}</td><td><span class="tag ok">${esc(x.nilai)}</span></td><td class="mute">${esc(x.feedback || "-")}</td><td>${berkas(x)}</td></tr>`).join("")}</table>` : kosong("Belum ada nilai.");
+  $("#rekap").innerHTML = done.length ? `<p class="mute sm" style="margin-bottom:12px">${done.length} hasil · rata-rata nilai ${Math.round(done.reduce((a, x) => a + (Number(x.nilai) || 0), 0) / done.length)} · <span class="tag ok">${done.filter((x) => tuntas(x.nilai, x._kkm)).length} tuntas</span> <span class="tag bad">${done.filter((x) => !tuntas(x.nilai, x._kkm)).length} belum tuntas</span></p><table><tr><th>Siswa</th><th>Kelas</th><th>Mapel</th><th>Tugas / kuis</th><th>Nilai</th><th>KKM</th><th>Ket.</th><th>Umpan balik</th><th>Berkas</th></tr>${done.map((x) => `<tr><td><b>${esc(x.siswaNama)}</b></td><td>${esc(x._kl)}</td><td>${esc(x._m)}</td><td>${esc(x.tugasJudul)}${x.jenis === "kuis" ? IG.tagHtml(x.integritas) : ""}</td><td><span class="tag ${tuntas(x.nilai, x._kkm) ? "ok" : "bad"}">${esc(x.nilai)}</span></td><td>${x._kkm}</td><td><span class="tag ${tuntas(x.nilai, x._kkm) ? "ok" : "bad"}">${labelTuntas(x.nilai, x._kkm)}</span></td><td class="mute">${esc(x.feedback || "-")}</td><td>${berkas(x)}</td></tr>`).join("")}</table>` : kosong("Belum ada nilai.");
 };
 /* ===== Ekspor rekap nilai (Excel & CSV) ===== */
 const tglID = (t) => (t?.seconds ? new Date(t.seconds * 1000).toLocaleDateString("id-ID") : "");
@@ -598,19 +624,19 @@ async function dataEkspor() {
   const sis = new Map(users.map((u) => [u.id, { nama: u.nama || u.email || "-", kelas: kOf(u.kelasId) ? kelasNama(kOf(u.kelasId)) : "Tanpa kelas" }]));
   done.forEach((x) => { if (!sis.has(x.siswaId)) sis.set(x.siswaId, { nama: x.siswaNama || "-", kelas: x._kl }); });
   const items = [], seen = new Set();
-  done.forEach((x) => { if (!seen.has(x.tugasId)) { seen.add(x.tugasId); items.push({ id: x.tugasId, judul: x.tugasJudul || "-", mapel: x._m, jenis: x.jenis === "kuis" ? "Kuis" : "Tugas" }); } });
+  done.forEach((x) => { if (!seen.has(x.tugasId)) { seen.add(x.tugasId); items.push({ id: x.tugasId, judul: x.tugasJudul || "-", mapel: x._m, kkm: x._kkm, jenis: x.jenis === "kuis" ? "Kuis" : "Tugas" }); } });
   items.sort((p, q) => urut(p.mapel, q.mapel) || urut(p.judul, q.judul));
   const nilai = {}; done.forEach((x) => ((nilai[x.siswaId] ||= {})[x.tugasId] = Number(x.nilai)));
   const daftar = [...sis.entries()].map(([id, s]) => ({ id, ...s })).sort((p, q) => urut(p.kelas, q.kelas) || urut(p.nama, q.nama));
   const label = items.map((it, i) => (items.findIndex((o) => o.judul === it.judul) === i ? it.judul : `${it.judul} (${it.mapel})`));
-  const flat = [["No", "Nama siswa", "Kelas", "Mapel", "Tugas / kuis", "Jenis", "Nilai", "Umpan balik", "Tanggal kirim", "Berkas / tautan", "Pindah tab (kuis)", "Waktu di luar halaman (detik)"],
-    ...done.map((x, i) => [i + 1, x.siswaNama, x._kl, x._m, x.tugasJudul, x.jenis === "kuis" ? "Kuis" : "Tugas", Number(x.nilai), x.feedback || "", tglID(x.createdAt), (x.files || []).map((f) => f.nama).concat(x.link ? [x.link] : []).join(" "), x.integritas ? x.integritas.pindah : "", x.integritas ? x.integritas.detik : ""])];
+  const flat = [["No", "Nama siswa", "Kelas", "Mapel", "Tugas / kuis", "Jenis", "Nilai", "KKM", "Keterangan", "Umpan balik", "Tanggal kirim", "Berkas / tautan", "Pindah tab (kuis)", "Waktu di luar halaman (detik)"],
+    ...done.map((x, i) => [i + 1, x.siswaNama, x._kl, x._m, x.tugasJudul, x.jenis === "kuis" ? "Kuis" : "Tugas", Number(x.nilai), x._kkm, labelTuntas(x.nilai, x._kkm), x.feedback || "", tglID(x.createdAt), (x.files || []).map((f) => f.nama).concat(x.link ? [x.link] : []).join(" "), x.integritas ? x.integritas.pindah : "", x.integritas ? x.integritas.detik : ""])];
   const matriks = [["No", "Nama siswa", "Kelas", ...label, "Jumlah dikerjakan", "Rata-rata"],
     ...daftar.map((s, i) => { const v = items.map((it) => nilai[s.id]?.[it.id]); const ada = v.filter((n) => Number.isFinite(n));
       return [i + 1, s.nama, s.kelas, ...v.map((n) => (Number.isFinite(n) ? n : "")), ada.length, ada.length ? bulat1(ada.reduce((p, n) => p + n, 0) / ada.length) : ""]; })];
-  const ringkas = [["Mapel", "Tugas / kuis", "Jenis", "Sudah mengumpulkan", "Belum mengumpulkan", "Rata-rata", "Tertinggi", "Terendah"],
+  const ringkas = [["Mapel", "Tugas / kuis", "Jenis", "Sudah mengumpulkan", "Belum mengumpulkan", "Rata-rata", "Tertinggi", "Terendah", "KKM", "Tuntas", "Belum tuntas"],
     ...items.map((it) => { const v = daftar.map((s) => nilai[s.id]?.[it.id]).filter((n) => Number.isFinite(n));
-      return [it.mapel, it.judul, it.jenis, v.length, Math.max(0, daftar.length - v.length), v.length ? bulat1(v.reduce((p, n) => p + n, 0) / v.length) : "", v.length ? Math.max(...v) : "", v.length ? Math.min(...v) : ""]; })];
+      return [it.mapel, it.judul, it.jenis, v.length, Math.max(0, daftar.length - v.length), v.length ? bulat1(v.reduce((p, n) => p + n, 0) / v.length) : "", v.length ? Math.max(...v) : "", v.length ? Math.min(...v) : "", it.kkm, v.filter((n) => tuntas(n, it.kkm)).length, v.filter((n) => !tuntas(n, it.kkm)).length]; })];
   const lbl = (s) => $(s).selectedOptions[0]?.textContent || "";
   const nama = `rekap-nilai_${EX.aman(lbl("#rKelas"))}_${EX.aman(lbl("#rMapel"))}_${new Date().toISOString().slice(0, 10)}`;
   return { flat, matriks, ringkas, nama, n: done.length };
