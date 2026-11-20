@@ -1135,7 +1135,7 @@ async function abMuat() {
     .filter((u) => (u.status || "aktif") === "aktif" && u.kelasId === k).sort((x, y) => String(x.nama || "").localeCompare(String(y.nama || ""), "id"));
   abPert = (await getDocs(query(collection(db, "pertemuan"), where("kelasId", "==", k)))).docs.map((d) => ({ id: d.id, ...d.data() }))
     .sort((x, y) => String(y.tanggal).localeCompare(String(x.tanggal)) || (y.createdAt?.seconds || 0) - (x.createdAt?.seconds || 0));
-  $("#abDaftar").innerHTML = abPert.map((p) => { const h = p.hitung; return `<li style="flex-wrap:wrap"><div class="row" style="min-width:0"><div class="fi">${icon("clock")}</div><div style="min-width:0"><b>${esc(fdate(p.tanggal))}</b>${h ? "" : ' <span class="tag warn">Belum diisi</span>'}<div class="mute sm">${esc(p.mapelNama || "Umum")}${p.topik ? " · " + esc(p.topik) : ""}</div>${h ? `<div class="mute sm">Hadir ${h.H} · Izin ${h.I} · Sakit ${h.S} · Alpa ${h.A} (${abPersen(h.H, p.total)}%)</div>` : ""}</div></div><div style="display:flex;gap:6px"><button class="btn ghost sm" data-ab="${p.id}">${h ? "Ubah" : "Isi absensi"}</button><button class="btn ghost sm" data-abd="${p.id}" title="Hapus" style="color:var(--bad)">${icon("trash")}</button></div></li>`; }).join("") || kosong("Belum ada pertemuan. Buat pertemuan baru di formulir.");
+  $("#abDaftar").innerHTML = abPert.map((p) => { const h = p.hitung; return `<li style="flex-wrap:wrap"><div class="row" style="min-width:0"><div class="fi">${icon("clock")}</div><div style="min-width:0"><b>${esc(fdate(p.tanggal))}</b>${h ? "" : ' <span class="tag warn">Belum diisi</span>'}<div class="mute sm">${esc(p.mapelNama || "Umum")}${p.topik ? " · " + esc(p.topik) : ""}</div>${h ? `<div class="mute sm">Hadir ${h.H} · Izin ${h.I} · Sakit ${h.S} · Alpa ${h.A} (${abPersen(h.H, p.total)}%)</div>` : ""}</div></div><div style="display:flex;gap:6px"><button class="btn ghost sm" data-ab="${p.id}">${h ? "Ubah" : "Isi absensi"}</button><button class="btn ghost sm" data-abe="${p.id}" title="Edit tanggal, mata pelajaran, topik">${icon("edit")}</button><button class="btn ghost sm" data-abd="${p.id}" title="Hapus" style="color:var(--bad)">${icon("trash")}</button></div></li>`; }).join("") || kosong("Belum ada pertemuan. Buat pertemuan baru di formulir.");
   if (abTab === "rekap") await abRekap();
 }
 views.absensi = async () => {
@@ -1156,12 +1156,26 @@ async function abBuka(p) {
   abKini = p;
   const ada = {}; (await getDocs(query(collection(db, "kehadiran"), where("pertemuanId", "==", p.id)))).docs.forEach((d) => (ada[d.data().siswaId] = d.data().status));
   abNilai = {}; abSis.forEach((s) => (abNilai[s.id] = ada[s.id] || "H"));
-  $("#abSheet").innerHTML = `<div class="gh2"><h2>Absensi · Kelas ${esc(kelasNama(p.kelasId))} · ${esc(fdate(p.tanggal))}</h2><button type="button" class="btn ghost sm" id="abTutup">Tutup</button></div>
+  $("#abSheet").innerHTML = `<div class="gh2"><h2>Absensi · Kelas ${esc(kelasNama(p.kelasId))} · ${esc(fdate(p.tanggal))}</h2><div style="display:flex;gap:6px"><button type="button" class="btn ghost sm" id="abEdit">${icon("edit")} Edit info</button><button type="button" class="btn ghost sm" id="abTutup">Tutup</button></div></div>
     <p class="mute sm">${esc(p.mapelNama || "Umum")}${p.topik ? " · " + esc(p.topik) : ""}. Semua siswa diawali Hadir, ubah yang tidak hadir.</p>
     ${abSis.length ? `<div class="tb"><button type="button" class="btn ghost sm" id="abSemua">Semua hadir</button><span class="mute sm" id="abHitung"></span></div>
     <div style="overflow-x:auto"><table class="abt"><thead><tr><th>No</th><th>Nama siswa</th><th>Kehadiran</th></tr></thead><tbody>${abSis.map((s, i) => `<tr><td>${i + 1}</td><td>${esc(s.nama || s.email || "-")}</td><td><div class="seg abseg" data-s="${s.id}">${["H", "I", "S", "A"].map((v) => `<button type="button" data-v="${v}" title="${AB[v]}" class="${abNilai[s.id] === v ? "on" : ""}">${v}</button>`).join("")}</div></td></tr>`).join("")}</tbody></table></div>
     <button type="button" class="btn full" id="abSimpan" style="margin-top:14px">Simpan absensi</button>` : kosong("Belum ada siswa aktif di kelas ini.")}`;
   $("#abSheet").classList.remove("hide"); abHitungTampil(); $("#abSheet").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+/* Edit info pertemuan: tanggal, mata pelajaran, topik. Salinan di dokumen kehadiran ikut diperbarui. */
+let abEd = null;
+function abEdit(p) {
+  abEd = p; abKini = null;
+  const ada = !p.mapelId || mapelAll.some((m) => m.id === p.mapelId);
+  $("#abSheet").innerHTML = `<div class="gh2"><h2>Edit pertemuan · Kelas ${esc(kelasNama(p.kelasId))}</h2></div>
+    <label>Tanggal</label><input type="date" id="abEdTgl" value="${esc(p.tanggal || "")}" required>
+    <label>Mata pelajaran</label><select id="abEdMapel">${opt("", "Umum")}${ada ? "" : opt(p.mapelId, (p.mapelNama || "Mapel dihapus") + " (dihapus)")}${mapelAll.map((m) => opt(m.id, m.nama)).join("")}</select>
+    <label>Topik (opsional)</label><input id="abEdTopik" maxlength="120" value="${esc(p.topik || "")}" placeholder="Contoh: Variabel dan tipe data">
+    <p class="mute sm" style="margin-top:8px">Perubahan juga diterapkan pada data kehadiran siswa di pertemuan ini.</p>
+    <div style="display:flex;gap:8px;margin-top:14px"><button type="button" class="btn" id="abEdSimpan">Simpan perubahan</button><button type="button" class="btn ghost" id="abEdBatal">Batal</button></div>`;
+  $("#abEdMapel").value = p.mapelId || "";
+  $("#abSheet").classList.remove("hide"); $("#abSheet").scrollIntoView({ behavior: "smooth", block: "start" });
 }
 $("#abForm").onsubmit = async (e) => {
   e.preventDefault(); const k = abKid(); if (!k) return alert("Buat dan pilih kelas dulu.");
@@ -1174,6 +1188,7 @@ $("#abDaftar").onclick = async (e) => {
   const b = e.target.closest("button"); if (!b) return;
   try {
     if (b.dataset.ab) await abBuka(abPert.find((p) => p.id === b.dataset.ab));
+    else if (b.dataset.abe) abEdit(abPert.find((p) => p.id === b.dataset.abe));
     else if (b.dataset.abd && await konfirmasi("Hapus pertemuan ini beserta seluruh data kehadirannya?")) {
       for (const d of (await getDocs(query(collection(db, "kehadiran"), where("pertemuanId", "==", b.dataset.abd)))).docs) await deleteDoc(doc(db, "kehadiran", d.id));
       await deleteDoc(doc(db, "pertemuan", b.dataset.abd)); toast("Pertemuan dihapus"); await abMuat();
@@ -1183,6 +1198,20 @@ $("#abDaftar").onclick = async (e) => {
 $("#abSheet").onclick = async (e) => {
   const b = e.target.closest("button"); if (!b) return;
   if (b.id === "abTutup") { $("#abSheet").classList.add("hide"); abKini = null; }
+  else if (b.id === "abEdit" && abKini) abEdit(abKini);
+  else if (b.id === "abEdBatal" && abEd) { const p = abEd; abEd = null; abBuka(p); }
+  else if (b.id === "abEdSimpan" && abEd) {
+    const lama = abEd, tgl = $("#abEdTgl").value, mid = $("#abEdMapel").value;
+    if (!tgl) return toast("Tanggal wajib diisi");
+    const baru = { tanggal: tgl, mapelId: mid, mapelNama: mid ? (mid === lama.mapelId && !mapelAll.some((m) => m.id === mid) ? lama.mapelNama || "" : mapelNama(mid)) : "", topik: $("#abEdTopik").value.trim() };
+    b.disabled = true; b.textContent = "Menyimpan...";
+    try {
+      await updateDoc(doc(db, "pertemuan", lama.id), { ...baru, updatedAt: serverTimestamp() });
+      const kh = (await getDocs(query(collection(db, "kehadiran"), where("pertemuanId", "==", lama.id)))).docs;
+      await Promise.all(kh.map((d) => updateDoc(doc(db, "kehadiran", d.id), { tanggal: baru.tanggal, mapelNama: baru.mapelNama, topik: baru.topik })));
+      abEd = null; toast("Pertemuan diperbarui"); await abMuat(); await abBuka({ ...lama, ...baru });
+    } catch (er) { rulesHint(er); b.disabled = false; b.textContent = "Simpan perubahan"; }
+  }
   else if (b.id === "abSemua") { abSis.forEach((s) => (abNilai[s.id] = "H")); $("#abSheet").querySelectorAll(".abseg button").forEach((x) => x.classList.toggle("on", x.dataset.v === "H")); abHitungTampil(); }
   else if (b.dataset.v) { const sid = b.parentElement.dataset.s; abNilai[sid] = b.dataset.v; b.parentElement.querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === b)); abHitungTampil(); }
   else if (b.id === "abSimpan" && abKini) {
