@@ -45,7 +45,7 @@ textarea{min-height:120px;resize:vertical}
 .mat{display:flex;flex-direction:column;gap:12px;transition:.15s}.mat:hover{border-color:var(--b2);transform:translateY(-2px)}
 .mat p{flex:1}
 .tag{display:inline-block;font-size:.74rem;font-weight:700;padding:3px 10px;border-radius:99px;background:var(--soft);color:var(--brand);white-space:nowrap}
-.tag.ok{background:var(--okbg);color:var(--ok)}.tag.warn{background:var(--warnbg);color:var(--warn)}
+.tag.ok{background:var(--okbg);color:var(--ok)}.tag.warn{background:var(--warnbg);color:var(--warn)}.tag.bad{background:#FDE8E8;color:#B42318}
 .empty{padding:30px;text-align:center;color:var(--mute)}
 table{width:100%;border-collapse:collapse;font-size:.9rem}th{text-align:left;color:var(--mute);font-size:.8rem;padding:10px 12px;border-bottom:1px solid var(--line)}td{padding:14px 12px;border-bottom:1px solid var(--line)}
 .score{font-size:2.4rem;font-weight:800;color:var(--brand);line-height:1}
@@ -103,6 +103,7 @@ import * as GM from "./js/poin.js";
 import * as KAL from "./js/kalender.js";
 import * as PR from "./js/progres.js";
 import * as IG from "./js/integritas.js";
+import { kkmMapel, tuntas, labelTuntas } from "./js/kkm.js";
 import { guard, esc, $, safeUrl, fdate, icon, toast, UPLOAD, fileOk, mimeOf, fmtSize, fileChips, isImg, kecilkan, toB64 } from "./js/common.js";
 
 const views = {};
@@ -124,7 +125,7 @@ const subs = {};
 (await getDocs(query(collection(db, "submissions"), where("siswaId", "==", user.uid)))).docs.forEach((d) => (subs[d.data().tugasId] = d.data()));
 
 const pr = PR.buat(user.uid); await pr.muat(); // progres materi: 1 dokumen per siswa
-const status = (id) => { const s = subs[id]; return !s ? '<span class="tag warn">Belum dikumpulkan</span>' : s.status === "selesai" ? `<span class="tag ok">Nilai ${esc(s.nilai)}</span>` : '<span class="tag">Menunggu nilai</span>'; };
+const status = (id) => { const s = subs[id]; return !s ? '<span class="tag warn">Belum dikumpulkan</span>' : s.status === "selesai" ? `<span class="tag ${tuntas(s.nilai, kkmDi(id)) ? "ok" : "bad"}">Nilai ${esc(s.nilai)} · ${labelTuntas(s.nilai, kkmDi(id))}</span>` : '<span class="tag">Menunggu nilai</span>'; };
 const mCard = (m) => `<div class="card mat${pr.ada(m.id) ? " pr-done" : ""}"><div class="row"><div class="fi">${icon(m.tipe === "modul" ? "book" : "file")}</div><span class="tag">${esc(m.tipe)}</span></div>
   <div><h2>${esc(m.judul)}</h2></div><p class="mute sm">${esc(m.deskripsi || "")}</p>
   <div style="display:flex;gap:8px;flex-wrap:wrap">${linkBtns(m)}${PR.tombol(m.id, pr.ada(m.id))}</div></div>`;
@@ -152,6 +153,9 @@ const linkBtns = (x) => linksOf(x).map((u) => `<a class="btn ghost sm" href="${s
 const mapelMap = Object.fromEntries(mapelList.map((m) => [m.id, m]));
 const mid = (x) => (x.mapelId && mapelMap[x.mapelId] ? x.mapelId : "");
 const namaMapel = (x) => mapelMap[mid(x)]?.nama || "Umum";
+// KKM mengikuti mata pelajaran dari tugas/kuis; konten "Umum" memakai KKM bawaan
+const kkmDi = (tid) => kkmMapel(mapelMap[mid([...tugas, ...kuis].find((x) => x.id === tid) || {})]);
+const kkmBaris = (tid, nilai) => `<p class="mute sm" style="margin-top:6px">KKM ${kkmDi(tid)} · <b style="color:var(--${tuntas(nilai, kkmDi(tid)) ? "ok" : "bad"})">${labelTuntas(nilai, kkmDi(tid))}</b></p>`;
 const allMapel = () => { const l = [...mapelList]; if ([...materi, ...tugas, ...kuis].some((x) => !mid(x))) l.push({ id: "", nama: "Umum" }); return l; };
 const inMapel = (arr, id) => arr.filter((x) => mid(x) === id);
 let curMapel = null, curTab = "materi";
@@ -161,7 +165,7 @@ const mapelCard = (m) => {
   const M = inMapel(materi, m.id), T = inMapel(tugas, m.id), K = inMapel(kuis, m.id);
   const pending = [...T, ...K].filter((x) => !subs[x.id]).length;
   return `<div class="card mat" data-m="${esc(m.id)}" style="cursor:pointer"><div class="row"><div class="fi">${icon("book")}</div>${pending ? `<span class="tag warn">${pending} belum dikerjakan</span>` : '<span class="tag ok">Terkini</span>'}</div>
-    <div><h2>${esc(m.nama)}</h2></div>${guruRow(m)}<p class="mute sm">${M.length} materi · ${T.length} tugas · ${K.length} kuis</p>${prMini(M)}</div>`;
+    <div><h2>${esc(m.nama)}</h2></div>${guruRow(m)}<p class="mute sm">${M.length} materi · ${T.length} tugas · ${K.length} kuis · KKM ${kkmMapel(m)}</p>${prMini(M)}</div>`;
 };
 const bindMapel = (root) => document.querySelectorAll(root + " [data-m]").forEach((c) => (c.onclick = () => openMapel(c.dataset.m)));
 const kuisApi = async (aksi, data) => {
@@ -197,7 +201,7 @@ document.addEventListener("click", async (e) => {
 const kItem = (k) => {
   const s = subs[k.id], now = Date.now(), maks = Number(k.maks) || 1;
   let tag;
-  if (s) tag = s.status === "selesai" ? `<span class="tag ok">Nilai ${esc(s.nilai)}</span>` : '<span class="tag">Menunggu nilai</span>';
+  if (s) tag = s.status === "selesai" ? `<span class="tag ${tuntas(s.nilai, kkmDi(k.id)) ? "ok" : "bad"}">Nilai ${esc(s.nilai)} · ${labelTuntas(s.nilai, kkmDi(k.id))}</span>` : '<span class="tag">Menunggu nilai</span>';
   else if (k.buka && now < k.buka) tag = `<span class="tag">Dibuka ${fmtWaktu(k.buka)}</span>`;
   else if (k.tutup && now > k.tutup) tag = '<span class="tag">Ditutup</span>';
   else tag = '<span class="tag warn">Belum dikerjakan</span>';
@@ -370,7 +374,7 @@ function renderDetail() {
 }
 views.nilai = () => {
   const r = Object.entries(subs).filter(([, s]) => s.status === "selesai");
-  $("#nilaiTbl").innerHTML = r.length ? `<table><tr><th>Mapel</th><th>Tugas / kuis</th><th>Nilai</th><th>Umpan balik</th><th>Sertifikat</th></tr>${r.map(([id, s]) => { const src = [...tugas, ...kuis].find((x) => x.id === id); return `<tr><td>${esc(src ? namaMapel(src) : "Umum")}</td><td><b>${esc(s.tugasJudul)}</b></td><td><span class="tag ok">${esc(s.nilai)}</span></td><td class="mute">${esc(s.feedback || "-")}</td><td>${src ? sertTag(src) : ""}</td></tr>`; }).join("")}</table>` : kosong("Belum ada nilai.");
+  $("#nilaiTbl").innerHTML = r.length ? `<table><tr><th>Mapel</th><th>Tugas / kuis</th><th>Nilai</th><th>KKM</th><th>Ket.</th><th>Umpan balik</th><th>Sertifikat</th></tr>${r.map(([id, s]) => { const src = [...tugas, ...kuis].find((x) => x.id === id), kk = kkmDi(id), tn = tuntas(s.nilai, kk); return `<tr><td>${esc(src ? namaMapel(src) : "Umum")}</td><td><b>${esc(s.tugasJudul)}</b></td><td><span class="tag ${tn ? "ok" : "bad"}">${esc(s.nilai)}</span></td><td>${kk}</td><td><span class="tag ${tn ? "ok" : "bad"}">${labelTuntas(s.nilai, kk)}</span></td><td class="mute">${esc(s.feedback || "-")}</td><td>${src ? sertTag(src) : ""}</td></tr>`; }).join("")}</table>` : kosong("Belum ada nilai.");
 };
 $("#tutup").onclick = () => $("#dlg").close();
 $("#dlg").addEventListener("close", () => { clearInterval(timerKuis); igAktif?.berhenti(); igAktif = null; });
@@ -381,7 +385,7 @@ function buka(id) {
   if (linksOf(t).length) h += `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">${linkBtns(t)}</div>`;
   if (s) {
     h += `<h2 style="margin-top:24px">Jawaban Anda</h2><div class="ans pre">${esc(s.jawaban || "(Tidak ada jawaban teks)")}</div>${fileChips(s.files)}${/^https?:\/\//i.test(s.link || "") ? `<div style="margin-top:10px"><a class="btn ghost sm" href="${safeUrl(s.link)}" target="_blank" rel="noopener">${icon("download")} Buka tautan</a></div>` : ""}
-      <div class="ans" style="margin-top:12px">${s.status === "selesai" ? `<div class="score">${esc(s.nilai)}</div><p style="margin-top:8px">${esc(s.feedback)}</p>` : '<span class="mute">Menunggu diperiksa guru.</span>'}</div>`;
+      <div class="ans" style="margin-top:12px">${s.status === "selesai" ? `<div class="score">${esc(s.nilai)}</div>${kkmBaris(id, s.nilai)}<p style="margin-top:8px">${esc(s.feedback)}</p>` : '<span class="mute">Menunggu diperiksa guru.</span>'}</div>`;
     $("#isi").innerHTML = h;
   } else {
     h += `<form id="f"><label>Jawaban</label><textarea id="j" placeholder="Tulis jawaban Anda (boleh kosong jika mengunggah file)"></textarea>
@@ -443,7 +447,7 @@ function kerjakan(id) {
   let h = `<h1 style="font-size:1.35rem">${esc(k.judul)}</h1><p class="mute sm" style="margin-top:4px">${(k.soal || []).length} soal · ${k.durasi ? "waktu " + k.durasi + " menit" : "tanpa batas waktu"} · ${maks} kali percobaan</p>`;
   if (k.deskripsi) h += `<p style="margin-top:8px">${esc(k.deskripsi)}</p>`;
   if (k.buka || k.tutup) h += `<p class="mute sm" style="margin-top:6px">${[k.buka ? "Dibuka " + fmtWaktu(k.buka) : "", k.tutup ? "Ditutup " + fmtWaktu(k.tutup) : ""].filter(Boolean).join(" · ")}</p>`;
-  if (s) h += `<div class="ans" style="text-align:center;margin-top:16px">${s.status === "selesai" ? `<div class="score">${esc(s.nilai)}</div><p class="mute" style="margin-top:6px">${esc(s.feedback || "")}</p>` : '<span class="mute">Menunggu diperiksa guru.</span>'}<p class="mute sm" style="margin-top:6px">Percobaan ${pakai} dari ${maks}</p></div>`;
+  if (s) h += `<div class="ans" style="text-align:center;margin-top:16px">${s.status === "selesai" ? `<div class="score">${esc(s.nilai)}</div>${kkmBaris(k.id, s.nilai)}<p class="mute" style="margin-top:6px">${esc(s.feedback || "")}</p>` : '<span class="mute">Menunggu diperiksa guru.</span>'}<p class="mute sm" style="margin-top:6px">Percobaan ${pakai} dari ${maks}</p></div>`;
   if (k.buka && now < k.buka) h += '<p class="mute" style="margin-top:14px">Kuis ini belum dibuka.</p>';
   else if (k.tutup && now > k.tutup) h += '<p class="mute" style="margin-top:14px">Kuis ini sudah ditutup.</p>';
   else if (pakai >= maks) h += '<p class="mute sm" style="margin-top:12px">Kesempatan mengerjakan sudah habis.</p>';
@@ -482,7 +486,7 @@ async function mulaiKuis(k) {
         const res = await kuisApi("kirim", { kuisId: k.id, jawaban, ig: ig.ambil() }); ig.selesai(); igAktif = null;
         subs[k.id] = { ...(subs[k.id] || {}), status: res.status, nilai: res.terbaik, feedback: res.feedback, percobaan: res.percobaan, tugasJudul: "Kuis: " + k.judul };
         views.beranda(); refreshDetail();
-        $("#isi").innerHTML = `<h1 style="font-size:1.35rem">${esc(k.judul)}</h1><div class="ans" style="text-align:center;margin-top:14px">${res.status === "selesai" ? `<div class="score">${esc(res.nilai)}</div>` : '<p>Jawaban terkirim. Menunggu diperiksa guru.</p>'}<p class="mute" style="margin-top:6px">${esc(res.feedback || "")}</p><p class="mute sm">Percobaan ${res.percobaan} dari ${res.maks}</p></div>${res.review ? reviewHtml(res.review) : ""}<button class="btn full" id="lagi">Kembali</button>`;
+        $("#isi").innerHTML = `<h1 style="font-size:1.35rem">${esc(k.judul)}</h1><div class="ans" style="text-align:center;margin-top:14px">${res.status === "selesai" ? `<div class="score">${esc(res.nilai)}</div>${kkmBaris(k.id, res.nilai)}` : '<p>Jawaban terkirim. Menunggu diperiksa guru.</p>'}<p class="mute" style="margin-top:6px">${esc(res.feedback || "")}</p><p class="mute sm">Percobaan ${res.percobaan} dari ${res.maks}</p></div>${res.review ? reviewHtml(res.review) : ""}<button class="btn full" id="lagi">Kembali</button>`;
         $("#lagi").onclick = () => kerjakan(k.id);
       } catch (er) { terkirim = false; alert(er.message); tb.disabled = false; tb.textContent = "Kirim jawaban"; }
     };
